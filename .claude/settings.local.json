@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Remove-Item \"E:\\\\Developpement\\\\111418\\\\livechat\\\\index.html\")",
+      "Bash(Remove-Item \"E:\\\\Developpement\\\\111418\\\\livechat\\\\overlay.html\")"
+    ]
+  }
+}
