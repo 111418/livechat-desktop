@@ -1,7 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
+import { initials} from "./assets/js/utils/avatar.ts";
 
 let greetInputEl: HTMLInputElement | null;
 let greetMsgEl: HTMLElement | null;
+
+const userAvatar = document.querySelector("#user-avatar");
+userAvatar!.textContent = initials("illyes")
+
 
 async function greet() {
   if (greetMsgEl && greetInputEl) {
