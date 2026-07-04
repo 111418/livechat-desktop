@@ -1,0 +1,22 @@
+.button {
+    @apply px-4 py-3 rounded font-bold border cursor-pointer transition-colors;
+    border-color: transparent;
+}
+
+.button-primary {
+    background-color: rgb(var(--color-primary-darker));
+    border-color: rgb(var(--color-primary));
+}
+
+.button-primary:hover {
+    background-color: rgb(var(--color-primary));
+}
+
+.button-secondary {
+    background-color: rgba(var(--color-gray), 0.2);
+    border-color: rgba(var(--color-gray), 0.2);
+}
+
+.button-secondary:hover {
+    background-color: rgba(var(--color-gray), 0.4);
+}

@@ -1,0 +1,37 @@
+/* set titlebar drag region */
+.titlebar {
+    @apply text-sm sticky top-0 left-0 right-0 w-full z-50;
+    -webkit-app-region: drag;
+    * {
+        -webkit-app-region: no-drag;
+    }
+
+    background-color: rgb(var(--color-titlebar));
+
+    @apply flex justify-between items-center px-6 py-2 border-b;
+    border-color: rgba(var(--color-gray), 0.2);
+    .titlebar-brand {
+        @apply font-bold flex items-center gap-3;
+
+        img {
+            @apply inline-block h-6 w-6;
+        }
+
+        span {
+            @apply font-medium px-2 py-1 rounded;
+            background-color: rgba(var(--color-primary-darker), 0.1);
+            color: rgb(var(--color-primary));
+        }
+    }
+
+    .titlebar-controls {
+        @apply flex items-center gap-3;
+        button {
+            color: rgba(var(--color-gray), 1);
+            @apply transition-colors cursor-pointer;
+        }
+        button:hover {
+            color: white;
+        }
+    }
+}

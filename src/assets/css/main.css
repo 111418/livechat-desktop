@@ -1,0 +1,29 @@
+html {
+    background-color: #18191c;
+    color: white;
+}
+
+body {
+    @apply h-screen flex flex-col overflow-hidden;
+
+}
+
+livechat-titlebar {
+    @apply block shrink-0;
+}
+
+body > main {
+    @apply flex-1 min-h-0;
+    overflow-y: auto;
+    scrollbar-color: rgba(var(--color-gray), 0.5) rgba(var(--color-gray), 0.1);
+    scrollbar-width: thin;
+}
+
+:root {
+    --color-primary: 151, 103, 241;
+    --color-primary-lighter: 151, 103, 241;
+    --color-primary-darker: 137, 103, 241;
+    --color-gray: 131, 132, 134;
+    --color-titlebar: 30, 31, 34;
+    --color-dark: 14, 15, 17;
+}

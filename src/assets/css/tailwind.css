@@ -1,1 +1,4 @@
 @import "tailwindcss";
+@import "./components/titlebar.css";
+@import "./components/buttons.css";
+@import "./main.css";

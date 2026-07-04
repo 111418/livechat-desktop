@@ -1,0 +1,61 @@
+@reference "../tailwind.css";
+
+main {
+    @apply flex flex-col items-center w-2/5 mx-auto gap-10 text-center justify-center;
+    div.presentation {
+        @apply flex flex-col items-center gap-3 justify-center;
+
+        h1 {
+            @apply text-3xl font-black;
+        }
+
+        .icon {
+            @apply p-4 rounded-xl border;
+            border-color:  rgba(var(--color-primary), 0.2);
+            background-color: rgba(var(--color-primary-darker), 0.2);
+
+            img {
+                @apply w-10 h-10 object-contain;
+            }
+        }
+    }
+
+    div.content {
+        @apply flex flex-col gap-4 w-full px-2;
+        .input-container {
+            @apply flex flex-col text-left gap-2 w-full;
+            label {
+                @apply uppercase font-bold text-sm;
+                color: rgb(var(--color-gray));
+            }
+            input {
+                @apply w-full px-2 py-2 rounded-lg outline-none font-medium;
+                background-color: rgb(var(--color-dark));
+            }
+            input:focus {
+                @apply ring ring-offset-1 ring-offset-gray-900;
+                --tw-ring-color: rgb(var(--color-primary-lighter));
+            }
+        }
+
+        .buttons {
+            @apply flex w-full flex-row gap-4;
+            button {
+                @apply w-full;
+            }
+        }
+    }
+
+    a {
+        @apply text-sm text-right font-bold;
+        color: rgb(var(--color-primary));
+    }
+
+    a:hover {
+        @apply underline;
+    }
+
+    p {
+        color: rgb(var(--color-gray));
+    }
+}
