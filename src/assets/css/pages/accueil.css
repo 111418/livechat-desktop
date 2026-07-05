@@ -1,0 +1,14 @@
+@reference "../tailwind.css";
+
+[data-count="0"]::after {
+    display: none;
+}
+
+[data-count]::after {
+    content: attr(data-count);
+    top: -10px;
+    right: -7px;
+    background: #ed6a5e;
+    @apply w-5 h-5 leading-tight absolute justify-center align-baseline items-center rounded-full ;
+
+}

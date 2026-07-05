@@ -20,3 +20,24 @@
 .button-secondary:hover {
     background-color: rgba(var(--color-gray), 0.4);
 }
+
+.button-slim{
+    background-color: rgb(var(--color-gray), 0.2);
+    border-color: rgba(var(--color-gray), 0.2);
+    padding: 5px;
+    border-radius: 10px;
+}
+.button-slim:hover {
+    background-color: rgba(var(--color-gray), 0.4);
+}
+
+.button-slim-primary{
+    background-color: rgb(var(--color-primary-darker));
+    border-color: rgb(var(--color-primary));
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.button-slim-primary:hover{
+    background-color: rgb(var(--color-primary));
+}

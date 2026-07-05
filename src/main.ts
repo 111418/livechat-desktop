@@ -5,7 +5,7 @@ let greetInputEl: HTMLInputElement | null;
 let greetMsgEl: HTMLElement | null;
 
 const userAvatar = document.querySelector("#user-avatar");
-userAvatar!.textContent = initials("illyes")
+userAvatar!.textContent = initials("Illyes")
 
 
 async function greet() {
