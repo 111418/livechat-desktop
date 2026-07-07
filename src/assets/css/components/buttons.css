@@ -41,3 +41,30 @@
 .button-slim-primary:hover{
     background-color: rgb(var(--color-primary));
 }
+
+
+.button-pill{
+    background-color: rgb(var(--color-gray), 0.2);
+    @apply rounded-full w-fit h-2
+}
+.button-pill:hover{
+    background-color: rgb(var(--color-gray), 0.4);
+}
+
+.button-pill-active{
+    background-color: rgb(var(--color-primary));
+    @apply rounded-full w-fit h-2
+}
+
+.button-pill-active:hover{
+    background-color: rgb(var(--color-primary-darker));
+}
+
+.button-pill-new{
+    border-color: rgb(var(--color-gray), 0.2);
+    @apply rounded-full w-fit h-2 border-dashed border-4
+}
+
+.button-pill-new:hover{
+    @apply border-solid
+}
