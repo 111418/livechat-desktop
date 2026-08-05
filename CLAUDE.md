@@ -55,7 +55,7 @@ Payload WS reçu par Rust :
 ```
 
 ## Règles de développement
-- **C'est Illyes qui développe** — Claude Code assiste, suggère, explique, mais ne prend pas d'initiatives non demandées
+- **C'est Ihlane qui développe** — Claude Code assiste, suggère, explique, mais ne prend pas d'initiatives non demandées
 - Ne jamais réécrire du code non concerné par la tâche en cours
 - Toujours expliquer les choix techniques quand on touche au Rust (Illyes apprend Rust)
 - Faire des commits logiques et atomiques
