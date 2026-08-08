@@ -35,6 +35,11 @@
                 </div>
                 <div id="media-panel"></div>
             </div>
+
+            <div id="message-section">
+                <div class="send-label">Message (optionnel)</div>
+                <input type="text" id="message-input" class="message-input" placeholder="Un petit mot pour accompagner le jumpscare…" autocomplete="off" maxlength="200">
+            </div>
         </div>
 
         <div id="send-sidebar">
@@ -43,6 +48,10 @@
             <div class="settings-slider-block">
                 <div class="settings-slider-head"><span>Durée</span><span class="settings-slider-value" id="duration-value">4,0 s</span></div>
                 <input type="range" min="5" max="100" step="5" value="40" id="duration-slider" class="volume-slider">
+                <label class="full-video-row" id="full-video-row" hidden>
+                    <input type="checkbox" id="full-video-checkbox">
+                    Envoyer la vidéo entière (ignore la durée)
+                </label>
             </div>
 
             <div class="settings-slider-block">
@@ -58,7 +67,15 @@
                 </div>
             </div>
 
-            <div id="transparent-callout" class="transparent-callout"></div>
+            <div class="settings-slider-block">
+                <div class="transparent-toggle-row">
+                    <span class="send-position-title">Plein écran chez la cible</span>
+                    <button type="button" class="send-toggle" id="send-transparent-toggle">
+                        <span class="send-toggle-knob"></span>
+                    </button>
+                </div>
+                <p class="transparent-hint" id="transparent-hint"></p>
+            </div>
 
             <button type="button" id="send-jumpscare-submit" class="send-submit-btn" disabled>⚡ Envoyer le jumpscare</button>
             <span id="send-footer-text" class="send-footer-text"></span>

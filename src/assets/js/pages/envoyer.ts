@@ -56,6 +56,8 @@ function initEnvoyer() {
     let activeMediaTab: MediaTab = "file";
     let media: MediaState = {type: "none"};
     let position: PositionId = overlay.position;
+    let transparent = overlay.transparent;
+    let useFullVideo = false;
 
     const chipsEl = document.querySelector<HTMLElement>("#recipients-chips");
     const mediaTabsEl = document.querySelector<HTMLElement>("#media-tabs");
@@ -66,7 +68,11 @@ function initEnvoyer() {
     const durationValueEl = document.querySelector<HTMLElement>("#duration-value");
     const volumeSlider = document.querySelector<HTMLInputElement>("#send-volume-slider");
     const volumeValueEl = document.querySelector<HTMLElement>("#send-volume-value");
-    const transparentCalloutEl = document.querySelector<HTMLElement>("#transparent-callout");
+    const transparentToggle = document.querySelector<HTMLButtonElement>("#send-transparent-toggle");
+    const transparentHintEl = document.querySelector<HTMLElement>("#transparent-hint");
+    const fullVideoRow = document.querySelector<HTMLElement>("#full-video-row");
+    const fullVideoCheckbox = document.querySelector<HTMLInputElement>("#full-video-checkbox");
+    const messageInput = document.querySelector<HTMLInputElement>("#message-input");
     const submitBtn = document.querySelector<HTMLButtonElement>("#send-jumpscare-submit");
     const footerTextEl = document.querySelector<HTMLElement>("#send-footer-text");
 
@@ -151,6 +157,20 @@ function initEnvoyer() {
     function revokePreview() {
         if (media.type === "file") URL.revokeObjectURL(media.previewUrl);
     }
+
+    function updateFullVideoOption() {
+        const isVideo = media.type === "file" && media.kind === "video";
+        if (fullVideoRow) fullVideoRow.hidden = !isVideo;
+
+        if (!isVideo) useFullVideo = false;
+        if (fullVideoCheckbox) fullVideoCheckbox.checked = useFullVideo;
+        if (durationSlider) durationSlider.disabled = isVideo && useFullVideo;
+    }
+
+    fullVideoCheckbox?.addEventListener("change", () => {
+        useFullVideo = fullVideoCheckbox.checked;
+        if (durationSlider) durationSlider.disabled = useFullVideo;
+    });
 
     function renderMediaPanel() {
         mediaTabsEl?.querySelectorAll<HTMLButtonElement>(".media-tab").forEach((tab) => {
@@ -251,6 +271,8 @@ function initEnvoyer() {
             renderMediaPanel();
             refreshSubmitState();
         });
+
+        updateFullVideoOption();
     }
 
     fileInput.addEventListener("change", () => {
@@ -316,12 +338,20 @@ function initEnvoyer() {
         });
     }
 
-    function renderTransparentCallout() {
-        if (!transparentCalloutEl) return;
-        transparentCalloutEl.innerHTML = overlay.transparent
-            ? `<span>👻</span><span>Mode transparent actif — plein écran chez la cible.</span>`
-            : `<span>🖼️</span><span>Mode transparent désactivé — le média s'affiche avec un fond opaque. Réglable dans Paramètres → Overlay.</span>`;
+    function renderTransparentToggle() {
+        transparentToggle?.classList.toggle("is-on", transparent);
+        transparentToggle?.setAttribute("aria-pressed", String(transparent));
+        if (transparentHintEl) {
+            transparentHintEl.textContent = transparent
+                ? "👻 Le média s'affiche seul, plein écran, fond invisible chez la cible."
+                : "🖼️ Le média s'affiche dans une fenêtre avec un fond opaque chez la cible.";
+        }
     }
+
+    transparentToggle?.addEventListener("click", () => {
+        transparent = !transparent;
+        renderTransparentToggle();
+    });
 
     function refreshSubmitState() {
         if (!submitBtn) return;
@@ -340,9 +370,12 @@ function initEnvoyer() {
         const payload = {
             recipients: recipients.map((r) => r.id),
             media,
-            duration: Number(durationSlider?.value ?? 40) / 10,
+            message: messageInput?.value.trim() || null,
+            duration: useFullVideo ? null : Number(durationSlider?.value ?? 40) / 10,
+            useFullVideo,
             volume: Number(volumeSlider?.value ?? overlay.volume),
             position,
+            transparent,
         };
         console.log("Envoi du jumpscare :", payload);
 
@@ -359,7 +392,7 @@ function initEnvoyer() {
     renderRecipients();
     renderMediaPanel();
     renderPositionGrid();
-    renderTransparentCallout();
+    renderTransparentToggle();
     refreshSubmitState();
 }
 
