@@ -1,0 +1,253 @@
+@reference "../tailwind.css";
+
+body > main {
+    @apply flex-1 min-h-0 flex flex-col overflow-hidden;
+}
+
+#settings-header {
+    @apply shrink-0 border-b;
+    border-color: rgba(var(--color-gray), 0.2);
+}
+
+#back-btn {
+    @apply w-[30px] h-[30px] rounded-[9px] flex items-center justify-center no-underline transition-colors text-base;
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #b5bac1;
+}
+
+#back-btn:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+#settings-body {
+    @apply flex-1 min-h-0 flex;
+}
+
+#settings-nav {
+    @apply w-[188px] shrink-0 flex flex-col gap-[3px] p-3 border-r overflow-y-auto;
+    background-color: #141518;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.settings-nav-label {
+    @apply text-[10px] font-bold tracking-[.1em] uppercase px-2.5 pt-1.5 pb-1;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.settings-nav-item {
+    @apply flex items-center gap-2 px-2.5 py-2.5 rounded-lg text-[13px] font-semibold text-left border-none cursor-pointer bg-transparent transition-colors;
+    color: #b5bac1;
+}
+
+.settings-nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.settings-nav-item.is-active {
+    background-color: rgba(var(--color-primary), 0.16);
+    color: #fff;
+    font-weight: 700;
+}
+
+.settings-nav-logout {
+    @apply mt-auto;
+    color: rgb(var(--color-red));
+}
+
+.settings-nav-logout:hover {
+    background-color: rgba(var(--color-red), 0.1);
+    color: rgb(var(--color-red));
+}
+
+#settings-content {
+    @apply flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-3.5;
+    scrollbar-color: rgba(var(--color-gray), 0.5) rgba(var(--color-gray), 0.1);
+    scrollbar-width: thin;
+}
+
+.settings-card {
+    @apply flex items-center gap-3.5 rounded-xl border px-4 py-3;
+    background-color: #1e1f22;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.settings-card-column {
+    @apply rounded-xl border px-4 py-3.5;
+    background-color: #1e1f22;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.settings-section-label {
+    @apply text-[10.5px] font-bold tracking-[.1em] uppercase;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.settings-avatar {
+    @apply w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-[15px] text-white shrink-0;
+    background: linear-gradient(135deg, rgb(var(--color-primary)), rgb(var(--color-primary-darker)));
+}
+
+.settings-name-col {
+    @apply flex flex-col gap-0.5;
+}
+
+.settings-name {
+    @apply font-extrabold text-sm text-white;
+}
+
+.settings-subtext {
+    @apply text-[11px] font-semibold;
+    color: #b5bac1;
+}
+
+.settings-btn {
+    @apply ml-auto border cursor-pointer font-bold text-xs px-3.5 py-2 rounded-[9px] bg-transparent transition-colors whitespace-nowrap;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #b5bac1;
+}
+
+.settings-btn:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #fff;
+}
+
+.settings-btn-danger {
+    border-color: rgba(var(--color-red), 0.4);
+    background-color: rgba(var(--color-red), 0.1);
+    color: rgb(var(--color-red));
+}
+
+.settings-btn-danger:hover {
+    background-color: rgba(var(--color-red), 0.2);
+    color: rgb(var(--color-red));
+}
+
+.settings-icon-badge {
+    @apply w-[30px] h-[30px] rounded-lg flex items-center justify-center text-sm shrink-0;
+    background-color: rgba(var(--color-green), 0.14);
+}
+
+.settings-ping {
+    @apply ml-auto flex items-center gap-1.5 text-[11px] font-bold;
+    color: rgb(var(--color-green));
+}
+
+.settings-ping::before {
+    content: "";
+    @apply w-[7px] h-[7px] rounded-full;
+    background-color: rgb(var(--color-green));
+}
+
+.settings-input {
+    @apply w-full rounded-lg px-3 py-2.5 text-sm text-white border outline-none;
+    background-color: rgb(var(--color-dark));
+    border-color: rgba(255, 255, 255, 0.1);
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+.settings-input:focus {
+    border-color: rgb(var(--color-primary));
+}
+
+.settings-inline-form {
+    @apply flex gap-2 mt-2;
+}
+
+/* Toggle switch */
+.settings-toggle {
+    @apply ml-auto w-11 h-[25px] rounded-full border-none cursor-pointer relative shrink-0 transition-colors;
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.settings-toggle.is-on {
+    background-color: rgb(var(--color-primary));
+    box-shadow: inset 0 0 8px rgba(192, 13, 255, 0.6);
+}
+
+.settings-toggle-knob {
+    @apply absolute top-[2.5px] left-[2.5px] w-5 h-5 rounded-full transition-all;
+    background-color: #fff;
+}
+
+.settings-toggle.is-on .settings-toggle-knob {
+    left: calc(100% - 22.5px);
+}
+
+/* Overlay row: position picker + volume */
+.overlay-row {
+    @apply flex gap-3.5;
+}
+
+.position-grid {
+    @apply grid gap-[3px] rounded-[7px] p-[5px] shrink-0;
+    width: 104px;
+    height: 65px;
+    background-color: #0c0d10;
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+}
+
+.position-cell {
+    @apply rounded-[2px] border-none cursor-pointer p-0 transition-colors;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.position-cell:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.position-cell.is-active {
+    background-color: rgb(var(--color-primary));
+    box-shadow: 0 0 6px rgba(151, 103, 241, 0.8);
+}
+
+.position-picker-row {
+    @apply flex gap-3.5 items-center;
+}
+
+.position-label {
+    @apply font-bold text-[12.5px] text-white leading-snug;
+}
+
+.volume-card {
+    @apply flex-1 flex flex-col justify-center;
+}
+
+.volume-row {
+    @apply flex items-center gap-2.5;
+}
+
+.volume-slider {
+    @apply flex-1 h-1.5 rounded appearance-none cursor-pointer outline-none;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    @apply appearance-none w-[17px] h-[17px] rounded-full;
+    background-color: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.volume-slider::-moz-range-thumb {
+    @apply w-[17px] h-[17px] rounded-full border-none;
+    background-color: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.volume-value {
+    @apply font-bold text-xs;
+    color: rgb(var(--color-primary));
+}
+
+.settings-callout {
+    @apply text-[12.5px] leading-relaxed rounded-xl border px-4 py-3.5;
+    background-color: rgba(var(--color-yellow), 0.08);
+    border-color: rgba(var(--color-yellow), 0.25);
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.settings-callout b {
+    color: rgb(var(--color-yellow));
+}

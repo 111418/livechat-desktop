@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <link rel="stylesheet" href="./assets/css/tailwind.css"/>
+    <link rel="stylesheet" href="./assets/css/pages/demandes.css"/>
+    <script type="module" src="./assets/js/components/titlebar.ts"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Demandes d'amis - Splatt</title>
+    <script type="module" src="./assets/js/pages/demandes.ts" defer></script>
+</head>
+<body>
+<livechat-titlebar></livechat-titlebar>
+<main>
+    <div id="demandes-header" class="flex items-center gap-3 px-4 py-3.5">
+        <a href="./index.html" id="back-btn" title="Retour" aria-label="Retour">←</a>
+        <span class="text-lg font-black">Demandes d'amis</span>
+    </div>
+
+    <div id="demandes-tabs">
+        <button type="button" class="demandes-tab" data-tab="received">
+            Reçues <span class="demandes-tab-count" id="received-count"></span>
+        </button>
+        <button type="button" class="demandes-tab" data-tab="sent">
+            Envoyées <span class="demandes-tab-count demandes-tab-count-muted" id="sent-count"></span>
+        </button>
+    </div>
+
+    <div id="demandes-list"></div>
+</main>
+</body>
+</html>

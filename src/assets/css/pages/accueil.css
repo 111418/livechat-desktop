@@ -1,0 +1,302 @@
+@reference "../tailwind.css";
+
+[data-count="0"]::after {
+    display: none;
+}
+
+[data-count]::after {
+    content: attr(data-count);
+    top: -10px;
+    right: -7px;
+    background: #ed6a5e;
+    font-size: 11px;
+    @apply w-5 h-5 leading-none absolute flex justify-center items-center rounded-full;
+}
+
+#friend-list {
+    @apply flex-1 min-h-0 overflow-y-auto px-2.5 pb-2 flex flex-col gap-[3px];
+    scrollbar-color: rgba(var(--color-gray), 0.5) rgba(var(--color-gray), 0.1);
+    scrollbar-width: thin;
+}
+
+.friend-group-label {
+    @apply text-[10px] font-bold tracking-[.1em] uppercase px-2 pt-2.5 pb-1;
+    color: rgba(255, 255, 255, 0.32);
+}
+
+.friend-empty-state {
+    @apply text-sm font-medium text-center px-4 py-10;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.friend-item {
+    @apply flex items-center gap-3 rounded-lg px-2 py-2 border border-transparent;
+}
+
+.friend-item-online {
+    background-color: rgba(var(--color-primary), 0.08);
+    border-color: rgba(var(--color-primary), 0.2);
+    @apply transition-colors;
+}
+
+.friend-item-online.is-deselected {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-color: transparent;
+}
+
+.friend-item-offline {
+    @apply opacity-40;
+}
+
+.friend-avatar {
+    @apply relative w-[38px] h-[38px] rounded-full flex items-center justify-center font-extrabold text-[13px] shrink-0;
+}
+
+.friend-status-dot {
+    @apply absolute -right-px -bottom-px w-3 h-3 rounded-full border-[2.5px];
+    border-color: #18191c;
+    background-color: rgb(var(--color-green));
+}
+
+.friend-status-dot-off {
+    background-color: rgb(var(--color-gray));
+}
+
+.friend-name-col {
+    @apply flex flex-col leading-tight;
+}
+
+.friend-name {
+    @apply font-bold text-sm text-white;
+}
+
+.friend-status-text {
+    @apply text-[11px] font-semibold;
+    color: rgb(var(--color-green));
+}
+
+.friend-status-text-off {
+    @apply text-[11px] font-medium;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.friend-status-text-muted {
+    @apply flex items-center gap-1 text-[11px] font-semibold;
+    color: rgb(var(--color-yellow));
+}
+
+.friend-actions {
+    @apply ml-auto flex items-center gap-2;
+}
+
+.mute-btn {
+    @apply w-[30px] h-[30px] rounded-[9px] border-none cursor-pointer flex items-center justify-center transition-colors;
+    background-color: rgba(var(--color-gray), 0.2);
+}
+
+.mute-btn:hover {
+    background-color: rgba(var(--color-gray), 0.4);
+}
+
+.mute-btn img {
+    @apply w-[15px] h-[15px];
+}
+
+.mute-btn-active {
+    background-color: rgba(var(--color-yellow), 0.15);
+    border: 1px solid rgba(var(--color-yellow), 0.4);
+}
+
+.select-check {
+    @apply w-[23px] h-[23px] rounded-full flex items-center justify-center cursor-pointer border-none shrink-0 transition-colors;
+    background-color: rgb(var(--color-primary));
+    box-shadow: 0 0 8px rgba(var(--color-primary), 0.6);
+}
+
+.select-check img {
+    @apply w-3 h-3 transition-opacity;
+}
+
+.select-check.is-empty {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: none;
+}
+
+.select-check.is-empty:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.7);
+}
+
+.select-check.is-empty img {
+    @apply opacity-0;
+}
+
+#selection-bar {
+    @apply hidden items-center gap-3 px-4 py-3 border-t shrink-0;
+    background-color: rgba(var(--color-primary), 0.1);
+    border-color: rgba(var(--color-primary), 0.25);
+}
+
+#selection-bar.is-visible {
+    @apply flex;
+}
+
+.selection-count {
+    @apply flex items-center justify-center w-6 h-6 rounded-[7px] font-extrabold text-xs text-white;
+    background-color: rgb(var(--color-primary));
+}
+
+.group-pill-wrap {
+    @apply relative inline-flex;
+}
+
+.pill-delete-btn {
+    @apply absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center border-none cursor-pointer text-[9px] font-bold leading-none transition-colors;
+    background-color: rgb(var(--color-red));
+    color: #fff;
+}
+
+.pill-delete-btn:hover {
+    background-color: #ff8177;
+}
+
+.modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-6;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.modal-panel {
+    @apply w-full max-w-[380px] rounded-xl border p-5 flex flex-col;
+    background-color: #1e1f22;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+.modal-message {
+    @apply text-sm leading-relaxed;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.button-danger {
+    background-color: rgba(var(--color-red), 0.85);
+    border-color: rgb(var(--color-red));
+}
+
+.button-danger:hover {
+    background-color: rgb(var(--color-red));
+}
+
+.modal-error {
+    @apply text-[12.5px] font-semibold mt-3;
+    color: rgb(var(--color-red));
+}
+
+.modal-header {
+    @apply flex items-center justify-between font-extrabold text-base text-white mb-4;
+}
+
+.modal-close {
+    @apply w-7 h-7 rounded-lg border-none cursor-pointer flex items-center justify-center transition-colors;
+    background-color: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.modal-label {
+    @apply text-[11px] font-bold tracking-[.05em] uppercase mb-2;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.modal-input {
+    @apply w-full rounded-lg px-3 py-2.5 text-sm text-white border outline-none;
+    background-color: rgb(var(--color-dark));
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.modal-input:focus {
+    border-color: rgb(var(--color-primary));
+}
+
+.modal-friend-list {
+    @apply flex flex-col gap-1 max-h-[220px] overflow-y-auto rounded-lg p-1.5;
+    background-color: rgba(0, 0, 0, 0.15);
+}
+
+.modal-friend-row {
+    @apply flex items-center gap-2.5 rounded-lg px-2 py-1.5 cursor-pointer border border-transparent transition-colors;
+}
+
+.modal-friend-row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.modal-friend-row.is-picked {
+    background-color: rgba(var(--color-primary), 0.12);
+    border-color: rgba(var(--color-primary), 0.3);
+}
+
+.modal-friend-name {
+    @apply flex-1 text-sm font-semibold text-white;
+}
+
+.modal-friend-checkbox {
+    @apply w-4 h-4 cursor-pointer;
+    accent-color: rgb(var(--color-primary));
+}
+
+.modal-footer {
+    @apply flex items-center justify-end gap-2 mt-5;
+}
+
+.modal-footer .button {
+    @apply px-4 py-2 text-sm;
+}
+
+.modal-footer .button:disabled {
+    @apply opacity-40 cursor-not-allowed;
+}
+
+.add-friend-search-row {
+    @apply flex gap-2 mb-1;
+}
+
+.add-friend-search-row .modal-input {
+    @apply flex-1;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+.search-btn {
+    @apply border-none cursor-pointer font-extrabold text-[12.5px] px-4 rounded-lg transition-colors;
+    background-color: rgba(var(--color-primary), 0.16);
+    color: #c2a6ff;
+}
+
+.search-btn:hover {
+    background-color: rgba(var(--color-primary), 0.28);
+}
+
+#discord-search-result:not(:empty) {
+    @apply mt-3;
+}
+
+.discord-result-card {
+    @apply flex items-center gap-3 rounded-[13px] border px-3.5 py-3;
+    background-color: #1b1c1f;
+    border-color: rgba(var(--color-green), 0.3);
+}
+
+.discord-found-badge {
+    @apply ml-auto flex items-center gap-1.5 font-bold text-[11px];
+    color: rgb(var(--color-green));
+}
+
+.discord-found-badge::before {
+    content: "";
+    @apply w-[7px] h-[7px] rounded-full;
+    background-color: rgb(var(--color-green));
+}

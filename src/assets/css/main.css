@@ -1,6 +1,7 @@
 html {
     background-color: #18191c;
     color: white;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 body {
@@ -13,10 +14,14 @@ livechat-titlebar {
 }
 
 body > main {
-    @apply flex-1 min-h-0;
-    overflow-y: auto;
-    scrollbar-color: rgba(var(--color-gray), 0.5) rgba(var(--color-gray), 0.1);
-    scrollbar-width: thin;
+    @apply flex-1 min-h-0 flex flex-col overflow-hidden;
+}
+
+body > main > header,
+body > main > #group-filter,
+body > main > #search-section,
+body > main > #selection-bar {
+    @apply shrink-0;
 }
 
 :root {
@@ -26,4 +31,7 @@ body > main {
     --color-gray: 131, 132, 134;
     --color-titlebar: 30, 31, 34;
     --color-dark: 14, 15, 17;
+    --color-green: 97, 196, 84;
+    --color-yellow: 244, 189, 80;
+    --color-red: 237, 106, 94;
 }

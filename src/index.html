@@ -1,17 +1,76 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <link rel="stylesheet" href="./assets/css/tailwind.css" />
+    <meta charset="UTF-8"/>
+    <link rel="stylesheet" href="./assets/css/tailwind.css"/>
+    <link rel="stylesheet" href="./assets/css/pages/accueil.css"/>
     <script type="module" src="./assets/js/components/titlebar.ts"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Accueil - Splatt</title>
     <script type="module" src="./main.ts" defer></script>
 </head>
 <body>
 <livechat-titlebar></livechat-titlebar>
 <main>
-    coucou
+    <header>
+        <div class="header-banner p-4 border-b border-[rgba(var(--color-gray),0.2)] justify-between flex items-center">
+            <div id="user" class="flex items-center gap-2">
+                <div class="relative">
+                    <div id="user-avatar"
+                         class="rounded-full w-10 h-10 flex items-center justify-center bg-[rgb(var(--color-primary))] font-bold"></div>
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-500 absolute bottom-1 right-0"></span>
+                </div>
+
+                <div id="username">
+                    <p class="font-black" id="username-display">illyes</p>
+                    <p class="text-[rgb(var(--color-primary))] font-black" id="usertag-display">#1418</p>
+                </div>
+            </div>
+
+            <div class="items-center flex gap-2">
+                <div id="user-status"
+                     class="relative border border-green-700 bg-[rgba(var(--color-green),0.18)] rounded-lg flex w-fit px-3 justify-center items-center gap-2 font-medium text-[rgb(var(--color-green))] py-0.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[rgb(var(--color-green))]"></span>
+                    <div> Connecté</div>
+                </div>
+
+
+                <a href="./demandes.html" class="button button-slim flex items-center w-fit gap-1.5 relative" data-count="2">
+                    <img src="./assets/svg/icons/user-plus.svg" alt="test" class="w-5 h-3.8 pl-1">
+                    <div> Demandes</div>
+                </a>
+
+                <button type="button" id="add-friend-btn" class="button button-slim-primary flex items-center w-fit gap-1.5 ">
+                    <span class="align-middle">+</span>
+                    <div> Ajouter un ami</div>
+                </button>
+
+                <a href="./parametres.html" class="button button-slim flex items-center w-fit gap-1.5 ">
+                    <img src="./assets/svg/icons/settings.svg" alt="settings" class="w-5 h-3.8">
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div id="group-filter" class="flex gap-2 items-center align-middle pl-4 pt-2.5 ">
+        <div class="font-medium text-sm text-">GROUPES</div>
+        <div id="group-pills" class="flex gap-2 items-center"></div>
+        <button type="button" id="add-group-btn" class="button button-pill-new text-sm flex items-center text-[rgb(var(--color-primary))]"> + Groupe</button>
+    </div>
+
+    <div id="search-section" class="p-4 flex items-center gap-5 w-fit">
+        <input type="text" id="friend-search" placeholder=" 🔍 Cherche un ami..." class="flex gap-2 bg-[rgb(var(--color-dark))] rounded-lg h-10 w-210 text-md">
+        <span id="friend-count-text" class="flex w-fit h-fit text-xs text-[rgb(var(--color-green))] font-medium"></span>
+    </div>
+
+    <div id="friend-list"></div>
+
+    <div id="selection-bar">
+        <span class="selection-count">0</span>
+        <span class="text-sm font-bold">sélectionnés <span class="text-[rgba(255,255,255,0.5)] font-medium">· groupe « <span id="selection-group-name"></span> »</span></span>
+        <button type="button" id="send-jumpscare-btn" class="button button-slim-primary flex items-center gap-2 ml-auto">⚡ Envoyer un jumpscare</button>
+    </div>
 </main>
+<div id="modal-root"></div>
 </body>
 </html>
