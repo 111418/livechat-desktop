@@ -15,6 +15,8 @@
 
 #friend-list {
     @apply flex-1 min-h-0 overflow-y-auto px-2.5 pb-2 flex flex-col gap-[3px];
+    scrollbar-color: rgba(var(--color-gray), 0.5) rgba(var(--color-gray), 0.1);
+    scrollbar-width: thin;
 }
 
 .friend-group-label {
@@ -143,6 +145,20 @@
 .selection-count {
     @apply flex items-center justify-center w-6 h-6 rounded-[7px] font-extrabold text-xs text-white;
     background-color: rgb(var(--color-primary));
+}
+
+.group-pill-wrap {
+    @apply relative inline-flex;
+}
+
+.pill-delete-btn {
+    @apply absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center border-none cursor-pointer text-[9px] font-bold leading-none transition-colors;
+    background-color: rgb(var(--color-red));
+    color: #fff;
+}
+
+.pill-delete-btn:hover {
+    background-color: #ff8177;
 }
 
 .modal-overlay {

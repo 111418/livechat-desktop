@@ -64,15 +64,50 @@ export function initAccueil() {
 
     function renderGroupPills() {
         const pills = [{id: ALL_GROUP_ID, label: "Tous"}, ...GROUPS];
-        groupPillsEl!.innerHTML = pills.map((group) => `
-            <button type="button" class="button ${group.id === activeGroupId ? "button-pill-active" : "button-pill"} text-sm flex items-center" data-group-id="${group.id}">
-                ${group.label} · ${groupMemberCount(group.id)}
-            </button>
-        `).join("");
+        groupPillsEl!.innerHTML = pills.map((group) => {
+            const isActive = group.id === activeGroupId;
+            const deletable = isActive && group.id !== ALL_GROUP_ID;
+            return `
+                <span class="group-pill-wrap">
+                    <button type="button" class="button ${isActive ? "button-pill-active" : "button-pill"} text-sm flex items-center" data-group-id="${group.id}">
+                        ${group.label} · ${groupMemberCount(group.id)}
+                    </button>
+                    ${deletable ? `<button type="button" class="pill-delete-btn" data-delete-group-id="${group.id}" title="Quitter le groupe">✕</button>` : ""}
+                </span>
+            `;
+        }).join("");
 
         groupPillsEl!.querySelectorAll<HTMLButtonElement>("button[data-group-id]").forEach((btn) => {
             btn.addEventListener("click", () => selectGroup(btn.dataset.groupId!));
         });
+
+        groupPillsEl!.querySelectorAll<HTMLButtonElement>("button[data-delete-group-id]").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                deleteGroup(btn.dataset.deleteGroupId!);
+            });
+        });
+    }
+
+    function deleteGroup(groupId: string) {
+        const group = GROUPS.find((g) => g.id === groupId);
+        if (!group) return;
+        if (!confirm(`Quitter le groupe « ${group.label} » ?`)) return;
+
+        const index = GROUPS.findIndex((g) => g.id === groupId);
+        if (index !== -1) GROUPS.splice(index, 1);
+        FRIENDS.forEach((f) => {
+            f.groupIds = f.groupIds.filter((id) => id !== groupId);
+        });
+
+        if (activeGroupId === groupId) {
+            activeGroupId = ALL_GROUP_ID;
+            selectedIds.clear();
+        }
+
+        renderGroupPills();
+        renderFriendList();
+        updateSelectionBar();
     }
 
     function renderFriendItem(friend: Friend): string {

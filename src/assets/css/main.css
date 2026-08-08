@@ -14,10 +14,14 @@ livechat-titlebar {
 }
 
 body > main {
-    @apply flex-1 min-h-0;
-    overflow-y: auto;
-    scrollbar-color: rgba(var(--color-gray), 0.5) rgba(var(--color-gray), 0.1);
-    scrollbar-width: thin;
+    @apply flex-1 min-h-0 flex flex-col overflow-hidden;
+}
+
+body > main > header,
+body > main > #group-filter,
+body > main > #search-section,
+body > main > #selection-bar {
+    @apply shrink-0;
 }
 
 :root {
