@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <link rel="stylesheet" href="./assets/css/tailwind.css"/>
+    <link rel="stylesheet" href="./assets/css/pages/parametres.css"/>
+    <script type="module" src="./assets/js/components/titlebar.ts"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Paramètres - Splatt</title>
+    <script type="module" src="./assets/js/pages/parametres.ts" defer></script>
+</head>
+<body>
+<livechat-titlebar></livechat-titlebar>
+<main>
+    <div id="settings-header" class="flex items-center gap-3 px-4 py-3.5">
+        <a href="./index.html" id="back-btn" title="Retour" aria-label="Retour">←</a>
+        <span class="text-lg font-black">Paramètres</span>
+    </div>
+
+    <div id="settings-body">
+        <nav id="settings-nav">
+            <div class="settings-nav-label">Réglages</div>
+            <button type="button" class="settings-nav-item" data-tab="compte">👤 Compte</button>
+            <button type="button" class="settings-nav-item" data-tab="overlay">🖥 Overlay</button>
+            <button type="button" class="settings-nav-item" data-tab="serveur">🛰 Serveur</button>
+            <button type="button" class="settings-nav-item" data-tab="securite">🛡 Sécurité</button>
+            <button type="button" class="settings-nav-item settings-nav-logout" id="logout-btn">⏻ Déconnexion</button>
+        </nav>
+        <div id="settings-content"></div>
+    </div>
+</main>
+</body>
+</html>
