@@ -1,9 +1,8 @@
 import {initials} from "../utils/avatar.ts";
 import {getAccount, setUsername} from "../utils/account-store.ts";
+import {getOverlaySettings, setOverlaySettings, type PositionId} from "../utils/overlay-settings-store.ts";
 
 type Tab = "compte" | "overlay" | "serveur" | "securite";
-
-type PositionId = "top-left" | "top-center" | "top-right" | "middle-left" | "center" | "middle-right" | "bottom-left" | "bottom-center" | "bottom-right";
 
 const POSITION_GRID: PositionId[] = [
     "top-left", "top-center", "top-right",
@@ -30,11 +29,7 @@ const server = {
     pingMs: 24,
 };
 
-const overlaySettings = {
-    transparent: true,
-    position: "top-right" as PositionId,
-    volume: 80,
-};
+const overlaySettings = getOverlaySettings();
 
 function initAccount(): void {
     let activeTab: Tab = "overlay";
@@ -154,6 +149,7 @@ function initAccount(): void {
             slider.addEventListener("input", () => {
                 overlaySettings.volume = Number(slider.value);
                 paint(overlaySettings.volume);
+                setOverlaySettings(overlaySettings);
             });
         }
     }
@@ -168,6 +164,7 @@ function initAccount(): void {
                 grid.querySelectorAll(".position-cell").forEach((c) => c.classList.remove("is-active"));
                 cell.classList.add("is-active");
                 if (label) label.innerHTML = POSITION_LABELS[overlaySettings.position];
+                setOverlaySettings(overlaySettings);
             });
         });
     }
@@ -178,6 +175,7 @@ function initAccount(): void {
             overlaySettings.transparent = !overlaySettings.transparent;
             toggle.classList.toggle("is-on", overlaySettings.transparent);
             toggle.setAttribute("aria-pressed", String(overlaySettings.transparent));
+            setOverlaySettings(overlaySettings);
         });
     }
 

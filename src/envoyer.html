@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <link rel="stylesheet" href="./assets/css/tailwind.css"/>
+    <link rel="stylesheet" href="./assets/css/pages/envoyer.css"/>
+    <script type="module" src="./assets/js/components/titlebar.ts"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Envoyer - Splatt</title>
+    <script type="module" src="./assets/js/pages/envoyer.ts" defer></script>
+</head>
+<body>
+<livechat-titlebar></livechat-titlebar>
+<main>
+    <div id="send-body">
+        <div id="send-main">
+            <div id="send-header">
+                <a href="./index.html" id="back-btn" title="Retour" aria-label="Retour">←</a>
+                <span class="text-lg font-black">Envoyer un jumpscare</span>
+            </div>
+
+            <div id="recipients-section">
+                <div class="send-label">Destinataires</div>
+                <div id="recipients-chips"></div>
+            </div>
+
+            <div id="media-section">
+                <div id="media-tabs-row">
+                    <span class="send-label">Média</span>
+                    <div id="media-tabs">
+                        <button type="button" class="media-tab" data-media-tab="file">Fichier</button>
+                        <button type="button" class="media-tab" data-media-tab="url">URL</button>
+                        <button type="button" class="media-tab" data-media-tab="gif">GIFs</button>
+                    </div>
+                </div>
+                <div id="media-panel"></div>
+            </div>
+        </div>
+
+        <div id="send-sidebar">
+            <div class="send-label">Réglages</div>
+
+            <div class="settings-slider-block">
+                <div class="settings-slider-head"><span>Durée</span><span class="settings-slider-value" id="duration-value">4,0 s</span></div>
+                <input type="range" min="5" max="100" step="5" value="40" id="duration-slider" class="volume-slider">
+            </div>
+
+            <div class="settings-slider-block">
+                <div class="settings-slider-head"><span>Volume</span><span class="settings-slider-value" id="send-volume-value">80%</span></div>
+                <input type="range" min="0" max="100" value="80" id="send-volume-slider" class="volume-slider">
+            </div>
+
+            <div class="settings-slider-block">
+                <span class="send-position-title">Position</span>
+                <div class="position-picker-row">
+                    <div class="position-grid" id="send-position-grid"></div>
+                    <span class="position-label-small" id="send-position-label"></span>
+                </div>
+            </div>
+
+            <div id="transparent-callout" class="transparent-callout"></div>
+
+            <button type="button" id="send-jumpscare-submit" class="send-submit-btn" disabled>⚡ Envoyer le jumpscare</button>
+            <span id="send-footer-text" class="send-footer-text"></span>
+        </div>
+    </div>
+</main>
+</body>
+</html>

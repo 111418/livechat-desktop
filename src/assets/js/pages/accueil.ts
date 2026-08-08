@@ -1,4 +1,5 @@
 import {initials} from "../utils/avatar.ts";
+import {setSendContext} from "../utils/send-context-store.ts";
 
 interface Friend {
     id: string;
@@ -497,7 +498,21 @@ export function initAccueil() {
 
     sendBtn?.addEventListener("click", () => {
         const targets = FRIENDS.filter((f) => selectedIds.has(f.id));
-        console.log("Envoi d'un jumpscare à", targets.map((f) => f.name));
+        if (!targets.length) return;
+
+        const activeGroup = GROUPS.find((g) => g.id === activeGroupId);
+        setSendContext({
+            recipients: targets.map((f) => ({
+                id: f.id,
+                name: f.name,
+                initials: f.initials,
+                color: f.color,
+                textColor: f.textColor,
+            })),
+            groupLabel: activeGroup?.label ?? null,
+        });
+
+        window.location.href = "./envoyer.html";
     });
 
     addGroupBtn?.addEventListener("click", openCreateGroupModal);
