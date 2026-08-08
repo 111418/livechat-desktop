@@ -22,6 +22,11 @@
     color: rgba(255, 255, 255, 0.32);
 }
 
+.friend-empty-state {
+    @apply text-sm font-medium text-center px-4 py-10;
+    color: rgba(255, 255, 255, 0.4);
+}
+
 .friend-item {
     @apply flex items-center gap-3 rounded-lg px-2 py-2 border border-transparent;
 }

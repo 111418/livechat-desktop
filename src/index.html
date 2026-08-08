@@ -54,108 +54,21 @@
 
     <div id="group-filter" class="flex gap-2 items-center align-middle pl-4 pt-2.5 ">
         <div class="font-medium text-sm text-">GROUPES</div>
-        <button class="button button-pill-active text-sm flex items-center">Les potes · 3</button>
-        <button class="button button-pill text-sm flex items-center">Stream squad · 2</button>
-        <button class="button button-pill-new text-sm flex items-center text-[rgb(var(--color-primary))]"> + Groupe</button>
+        <div id="group-pills" class="flex gap-2 items-center"></div>
+        <button type="button" class="button button-pill-new text-sm flex items-center text-[rgb(var(--color-primary))]"> + Groupe</button>
     </div>
 
     <div id="search-section" class="p-4 flex items-center gap-5 w-fit">
-        <input type="text" placeholder=" 🔍 Cherche un ami..." class="flex gap-2 bg-[rgb(var(--color-dark))] rounded-lg h-10 w-210 text-md">
-        <span class="flex w-fit h-fit text-xs text-[rgb(var(--color-green))] font-medium">3 ouvertes · 5 amis</span>
+        <input type="text" id="friend-search" placeholder=" 🔍 Cherche un ami..." class="flex gap-2 bg-[rgb(var(--color-dark))] rounded-lg h-10 w-210 text-md">
+        <span id="friend-count-text" class="flex w-fit h-fit text-xs text-[rgb(var(--color-green))] font-medium"></span>
     </div>
 
-    <div id="friend-list">
-        <div class="friend-group-label">App ouverte — 3</div>
-
-        <div class="friend-item friend-item-online" data-friend-id="nour" data-selected="true">
-            <div class="friend-avatar" style="background:#5865F2">
-                NR
-                <span class="friend-status-dot"></span>
-            </div>
-            <div class="friend-name-col">
-                <span class="friend-name">Nour</span>
-                <span class="friend-status-text">App ouverte</span>
-            </div>
-            <div class="friend-actions">
-                <button type="button" class="mute-btn" title="Muter — bloque ses jumpscares">
-                    <img src="./assets/svg/icons/bell.svg" alt="">
-                </button>
-                <button type="button" class="select-check">
-                    <img src="./assets/svg/icons/check.svg" alt="">
-                </button>
-            </div>
-        </div>
-
-        <div class="friend-item friend-item-online" data-friend-id="theo" data-selected="true" data-muted="true">
-            <div class="friend-avatar" style="background:#ED6A5E">
-                TH
-                <span class="friend-status-dot"></span>
-            </div>
-            <div class="friend-name-col">
-                <span class="friend-name">Théo</span>
-                <span class="friend-status-text-muted">
-                    <img src="./assets/svg/icons/bell-off.svg" alt="" class="w-2.5 h-2.5">
-                    Muté · ne te réveillera pas
-                </span>
-            </div>
-            <div class="friend-actions">
-                <button type="button" class="mute-btn mute-btn-active" title="Réactiver les jumpscares">
-                    <img src="./assets/svg/icons/bell-off.svg" alt="">
-                </button>
-                <button type="button" class="select-check">
-                    <img src="./assets/svg/icons/check.svg" alt="">
-                </button>
-            </div>
-        </div>
-
-        <div class="friend-item friend-item-online" data-friend-id="maya" data-selected="true">
-            <div class="friend-avatar" style="background:#F4BD50;color:#3a2a00">
-                MA
-                <span class="friend-status-dot"></span>
-            </div>
-            <div class="friend-name-col">
-                <span class="friend-name">Maya</span>
-                <span class="friend-status-text">App ouverte</span>
-            </div>
-            <div class="friend-actions">
-                <button type="button" class="mute-btn" title="Muter — bloque ses jumpscares">
-                    <img src="./assets/svg/icons/bell.svg" alt="">
-                </button>
-                <button type="button" class="select-check">
-                    <img src="./assets/svg/icons/check.svg" alt="">
-                </button>
-            </div>
-        </div>
-
-        <div class="friend-group-label">App fermée — 2</div>
-
-        <div class="friend-item friend-item-offline" data-friend-id="sami">
-            <div class="friend-avatar" style="background:#3a3b40">
-                SA
-                <span class="friend-status-dot friend-status-dot-off"></span>
-            </div>
-            <div class="friend-name-col">
-                <span class="friend-name">Sami</span>
-                <span class="friend-status-text-off">App fermée</span>
-            </div>
-        </div>
-
-        <div class="friend-item friend-item-offline" data-friend-id="lea">
-            <div class="friend-avatar" style="background:#3a3b40">
-                LE
-                <span class="friend-status-dot friend-status-dot-off"></span>
-            </div>
-            <div class="friend-name-col">
-                <span class="friend-name">Léa</span>
-                <span class="friend-status-text-off">App fermée</span>
-            </div>
-        </div>
-    </div>
+    <div id="friend-list"></div>
 
     <div id="selection-bar">
         <span class="selection-count">0</span>
-        <span class="text-sm font-bold">sélectionnés <span class="text-[rgba(255,255,255,0.5)] font-medium">· groupe « Les potes »</span></span>
-        <button type="button" class="button button-slim-primary flex items-center gap-2 ml-auto">⚡ Envoyer un jumpscare</button>
+        <span class="text-sm font-bold">sélectionnés <span class="text-[rgba(255,255,255,0.5)] font-medium">· groupe « <span id="selection-group-name"></span> »</span></span>
+        <button type="button" id="send-jumpscare-btn" class="button button-slim-primary flex items-center gap-2 ml-auto">⚡ Envoyer un jumpscare</button>
     </div>
 </main>
 </body>
