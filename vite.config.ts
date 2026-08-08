@@ -16,6 +16,7 @@ export default defineConfig(() => ({
       input: {
         index: resolve(__dirname, "src/index.html"),
         overlay: resolve(__dirname, "src/overlay.html"),
+        demandes: resolve(__dirname, "src/demandes.html"),
       },
     },
   },
