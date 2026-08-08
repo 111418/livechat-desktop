@@ -78,6 +78,11 @@ function initEnvoyer() {
     fileInput.style.display = "none";
     document.body.appendChild(fileInput);
 
+    document.addEventListener("click", () => {
+        const dropdown = chipsEl!.querySelector<HTMLElement>("#add-recipient-dropdown");
+        if (dropdown) dropdown.hidden = true;
+    });
+
     function renderRecipients() {
         const chips = recipients.map((r) => `
             <span class="recipient-chip" data-recipient-id="${r.id}">
@@ -89,7 +94,19 @@ function initEnvoyer() {
 
         const addableLeft = ADDABLE_FRIENDS.filter((f) => !recipients.some((r) => r.id === f.id));
         const addChip = addableLeft.length
-            ? `<button type="button" class="add-recipient-chip" id="add-recipient-btn">＋ Ajouter</button>`
+            ? `
+                <span class="add-recipient-wrap">
+                    <button type="button" class="add-recipient-chip" id="add-recipient-btn">＋ Ajouter</button>
+                    <div class="add-recipient-dropdown" id="add-recipient-dropdown" hidden>
+                        ${addableLeft.map((f) => `
+                            <button type="button" class="add-recipient-option" data-add-friend-id="${f.id}">
+                                <span class="recipient-chip-avatar" style="background:${f.color}${f.textColor ? `;color:${f.textColor}` : ""}">${f.initials}</span>
+                                ${f.name}
+                            </button>
+                        `).join("")}
+                    </div>
+                </span>
+            `
             : "";
 
         const empty = !recipients.length
@@ -110,12 +127,21 @@ function initEnvoyer() {
             });
         });
 
-        chipsEl!.querySelector<HTMLButtonElement>("#add-recipient-btn")?.addEventListener("click", () => {
-            const next = addableLeft[0];
-            if (!next) return;
-            recipients.push(next);
-            renderRecipients();
-            refreshSubmitState();
+        const dropdown = chipsEl!.querySelector<HTMLElement>("#add-recipient-dropdown");
+
+        chipsEl!.querySelector<HTMLButtonElement>("#add-recipient-btn")?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (dropdown) dropdown.hidden = !dropdown.hidden;
+        });
+
+        dropdown?.querySelectorAll<HTMLButtonElement>("[data-add-friend-id]").forEach((option) => {
+            option.addEventListener("click", () => {
+                const friend = ADDABLE_FRIENDS.find((f) => f.id === option.dataset.addFriendId);
+                if (!friend) return;
+                recipients.push(friend);
+                renderRecipients();
+                refreshSubmitState();
+            });
         });
 
         const originEl = document.querySelector<HTMLElement>("#recipients-origin-text");

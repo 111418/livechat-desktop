@@ -73,6 +73,25 @@ body > main {
     border-color: rgba(255, 255, 255, 0.35);
 }
 
+.add-recipient-wrap {
+    @apply relative inline-flex;
+}
+
+.add-recipient-dropdown {
+    @apply absolute left-0 top-[calc(100%+6px)] z-10 flex flex-col gap-[2px] rounded-xl border p-1.5 min-w-[160px];
+    background-color: #232428;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.6);
+}
+
+.add-recipient-option {
+    @apply flex items-center gap-2 rounded-lg px-2 py-1.5 border-none cursor-pointer bg-transparent text-left font-semibold text-[12.5px] text-white transition-colors;
+}
+
+.add-recipient-option:hover {
+    background-color: rgba(var(--color-primary), 0.16);
+}
+
 .recipients-empty {
     @apply text-[12.5px] font-medium;
     color: rgba(255, 255, 255, 0.4);
