@@ -260,3 +260,43 @@
 .modal-footer .button:disabled {
     @apply opacity-40 cursor-not-allowed;
 }
+
+.add-friend-search-row {
+    @apply flex gap-2 mb-1;
+}
+
+.add-friend-search-row .modal-input {
+    @apply flex-1;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+.search-btn {
+    @apply border-none cursor-pointer font-extrabold text-[12.5px] px-4 rounded-lg transition-colors;
+    background-color: rgba(var(--color-primary), 0.16);
+    color: #c2a6ff;
+}
+
+.search-btn:hover {
+    background-color: rgba(var(--color-primary), 0.28);
+}
+
+#discord-search-result:not(:empty) {
+    @apply mt-3;
+}
+
+.discord-result-card {
+    @apply flex items-center gap-3 rounded-[13px] border px-3.5 py-3;
+    background-color: #1b1c1f;
+    border-color: rgba(var(--color-green), 0.3);
+}
+
+.discord-found-badge {
+    @apply ml-auto flex items-center gap-1.5 font-bold text-[11px];
+    color: rgb(var(--color-green));
+}
+
+.discord-found-badge::before {
+    content: "";
+    @apply w-[7px] h-[7px] rounded-full;
+    background-color: rgb(var(--color-green));
+}
