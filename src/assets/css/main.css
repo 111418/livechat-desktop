@@ -28,4 +28,6 @@ body > main {
     --color-titlebar: 30, 31, 34;
     --color-dark: 14, 15, 17;
     --color-green: 97, 196, 84;
+    --color-yellow: 244, 189, 80;
+    --color-red: 237, 106, 94;
 }

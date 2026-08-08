@@ -12,3 +12,130 @@
     @apply w-5 h-5 leading-tight absolute justify-center align-baseline items-center rounded-full ;
 
 }
+
+#friend-list {
+    @apply flex-1 min-h-0 overflow-y-auto px-2.5 pb-2 flex flex-col gap-[3px];
+}
+
+.friend-group-label {
+    @apply text-[10px] font-bold tracking-[.1em] uppercase px-2 pt-2.5 pb-1;
+    color: rgba(255, 255, 255, 0.32);
+}
+
+.friend-item {
+    @apply flex items-center gap-3 rounded-lg px-2 py-2 border border-transparent;
+}
+
+.friend-item-online {
+    background-color: rgba(var(--color-primary), 0.08);
+    border-color: rgba(var(--color-primary), 0.2);
+    @apply transition-colors;
+}
+
+.friend-item-online.is-deselected {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-color: transparent;
+}
+
+.friend-item-offline {
+    @apply opacity-40;
+}
+
+.friend-avatar {
+    @apply relative w-[38px] h-[38px] rounded-full flex items-center justify-center font-extrabold text-[13px] shrink-0;
+}
+
+.friend-status-dot {
+    @apply absolute -right-px -bottom-px w-3 h-3 rounded-full border-[2.5px];
+    border-color: #18191c;
+    background-color: rgb(var(--color-green));
+}
+
+.friend-status-dot-off {
+    background-color: rgb(var(--color-gray));
+}
+
+.friend-name-col {
+    @apply flex flex-col leading-tight;
+}
+
+.friend-name {
+    @apply font-bold text-sm text-white;
+}
+
+.friend-status-text {
+    @apply text-[11px] font-semibold;
+    color: rgb(var(--color-green));
+}
+
+.friend-status-text-off {
+    @apply text-[11px] font-medium;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.friend-status-text-muted {
+    @apply flex items-center gap-1 text-[11px] font-semibold;
+    color: rgb(var(--color-yellow));
+}
+
+.friend-actions {
+    @apply ml-auto flex items-center gap-2;
+}
+
+.mute-btn {
+    @apply w-[30px] h-[30px] rounded-[9px] border-none cursor-pointer flex items-center justify-center transition-colors;
+    background-color: rgba(var(--color-gray), 0.2);
+}
+
+.mute-btn:hover {
+    background-color: rgba(var(--color-gray), 0.4);
+}
+
+.mute-btn img {
+    @apply w-[15px] h-[15px];
+}
+
+.mute-btn-active {
+    background-color: rgba(var(--color-yellow), 0.15);
+    border: 1px solid rgba(var(--color-yellow), 0.4);
+}
+
+.select-check {
+    @apply w-[23px] h-[23px] rounded-full flex items-center justify-center cursor-pointer border-none shrink-0 transition-colors;
+    background-color: rgb(var(--color-primary));
+    box-shadow: 0 0 8px rgba(var(--color-primary), 0.6);
+}
+
+.select-check img {
+    @apply w-3 h-3 transition-opacity;
+}
+
+.select-check.is-empty {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: none;
+}
+
+.select-check.is-empty:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.7);
+}
+
+.select-check.is-empty img {
+    @apply opacity-0;
+}
+
+#selection-bar {
+    @apply hidden items-center gap-3 px-4 py-3 border-t shrink-0;
+    background-color: rgba(var(--color-primary), 0.1);
+    border-color: rgba(var(--color-primary), 0.25);
+}
+
+#selection-bar.is-visible {
+    @apply flex;
+}
+
+.selection-count {
+    @apply flex items-center justify-center w-6 h-6 rounded-[7px] font-extrabold text-xs text-white;
+    background-color: rgb(var(--color-primary));
+}
