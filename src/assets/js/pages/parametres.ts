@@ -1,4 +1,5 @@
 import {initials} from "../utils/avatar.ts";
+import {getAccount, setUsername} from "../utils/account-store.ts";
 
 type Tab = "compte" | "overlay" | "serveur" | "securite";
 
@@ -22,10 +23,7 @@ const POSITION_LABELS: Record<PositionId, string> = {
     "bottom-right": "Bas<br>Droite",
 };
 
-const account = {
-    username: "illyes",
-    tag: "1418",
-};
+const account = getAccount();
 
 const server = {
     url: "wss://livechat.111418.gg/ws",
@@ -190,6 +188,7 @@ function initAccount(): void {
             const value = input?.value.trim();
             if (!value) return;
             account.username = value;
+            setUsername(value);
             console.log("Pseudo mis à jour :", value);
             renderContent();
         });
