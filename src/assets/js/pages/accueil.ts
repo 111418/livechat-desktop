@@ -14,6 +14,8 @@ interface Group {
     label: string;
 }
 
+const ALL_GROUP_ID = "all";
+
 const GROUPS: Group[] = [
     {id: "potes", label: "Les potes"},
     {id: "stream", label: "Stream squad"},
@@ -27,6 +29,16 @@ const FRIENDS: Friend[] = [
     {id: "lea", name: "Léa", initials: "LE", color: "#3a3b40", online: false, muted: false, groupIds: ["stream"]},
 ];
 
+function slugify(name: string): string {
+    const base = name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+    return base || `groupe-${Date.now()}`;
+}
+
 export function initAccueil() {
     const groupPillsEl = document.querySelector<HTMLElement>("#group-pills");
     const friendListEl = document.querySelector<HTMLElement>("#friend-list");
@@ -36,21 +48,23 @@ export function initAccueil() {
     const selectionCount = selectionBar?.querySelector(".selection-count");
     const selectionGroupName = document.querySelector<HTMLElement>("#selection-group-name");
     const sendBtn = document.querySelector<HTMLButtonElement>("#send-jumpscare-btn");
+    const addGroupBtn = document.querySelector<HTMLButtonElement>("#add-group-btn");
+    const modalRoot = document.querySelector<HTMLElement>("#modal-root");
 
     if (!groupPillsEl || !friendListEl) return;
 
-    let activeGroupId = GROUPS[0]?.id ?? "";
+    let activeGroupId = ALL_GROUP_ID;
     let searchQuery = "";
-    const selectedIds = new Set<string>(
-        FRIENDS.filter((f) => f.online && f.groupIds.includes(activeGroupId)).map((f) => f.id)
-    );
+    const selectedIds = new Set<string>();
 
     function groupMemberCount(groupId: string): number {
+        if (groupId === ALL_GROUP_ID) return FRIENDS.length;
         return FRIENDS.filter((f) => f.groupIds.includes(groupId)).length;
     }
 
     function renderGroupPills() {
-        groupPillsEl!.innerHTML = GROUPS.map((group) => `
+        const pills = [{id: ALL_GROUP_ID, label: "Tous"}, ...GROUPS];
+        groupPillsEl!.innerHTML = pills.map((group) => `
             <button type="button" class="button ${group.id === activeGroupId ? "button-pill-active" : "button-pill"} text-sm flex items-center" data-group-id="${group.id}">
                 ${group.label} · ${groupMemberCount(group.id)}
             </button>
@@ -106,9 +120,15 @@ export function initAccueil() {
         `;
     }
 
+    function friendsInActiveGroup(): Friend[] {
+        return activeGroupId === ALL_GROUP_ID
+            ? FRIENDS
+            : FRIENDS.filter((f) => f.groupIds.includes(activeGroupId));
+    }
+
     function renderFriendList() {
         const query = searchQuery.trim().toLowerCase();
-        const visible = FRIENDS.filter((f) => f.name.toLowerCase().includes(query));
+        const visible = friendsInActiveGroup().filter((f) => f.name.toLowerCase().includes(query));
         const online = visible.filter((f) => f.online);
         const offline = visible.filter((f) => !f.online);
 
@@ -122,7 +142,8 @@ export function initAccueil() {
             html += offline.map(renderFriendItem).join("");
         }
         if (!visible.length) {
-            html = `<div class="friend-empty-state">Aucun ami ne correspond à « ${searchQuery} »</div>`;
+            const reason = query ? `« ${searchQuery} »` : "ce groupe";
+            html = `<div class="friend-empty-state">Aucun ami ne correspond à ${reason}</div>`;
         }
         friendListEl!.innerHTML = html;
 
@@ -138,8 +159,7 @@ export function initAccueil() {
             });
         });
 
-        const openCount = FRIENDS.filter((f) => f.online).length;
-        if (countText) countText.textContent = `${openCount} ouvertes · ${FRIENDS.length} amis`;
+        if (countText) countText.textContent = `${online.length} ouvertes · ${visible.length} amis`;
     }
 
     function toggleSelection(friendId: string) {
@@ -162,7 +182,9 @@ export function initAccueil() {
     function selectGroup(groupId: string) {
         activeGroupId = groupId;
         selectedIds.clear();
-        FRIENDS.filter((f) => f.online && f.groupIds.includes(groupId)).forEach((f) => selectedIds.add(f.id));
+        if (groupId !== ALL_GROUP_ID) {
+            FRIENDS.filter((f) => f.online && f.groupIds.includes(groupId)).forEach((f) => selectedIds.add(f.id));
+        }
         renderGroupPills();
         renderFriendList();
         updateSelectionBar();
@@ -172,8 +194,94 @@ export function initAccueil() {
         const count = selectedIds.size;
         if (selectionCount) selectionCount.textContent = String(count);
         const activeGroup = GROUPS.find((g) => g.id === activeGroupId);
-        if (selectionGroupName) selectionGroupName.textContent = activeGroup?.label ?? "";
+        if (selectionGroupName) selectionGroupName.textContent = activeGroup?.label ?? "Tous";
         selectionBar?.classList.toggle("is-visible", count > 0);
+    }
+
+    function closeModal() {
+        if (modalRoot) modalRoot.innerHTML = "";
+    }
+
+    function openCreateGroupModal() {
+        if (!modalRoot) return;
+        const pickedIds = new Set<string>();
+
+        modalRoot.innerHTML = `
+            <div class="modal-overlay">
+                <div class="modal-panel">
+                    <div class="modal-header">
+                        <span>Nouveau groupe</span>
+                        <button type="button" class="modal-close" aria-label="Fermer">✕</button>
+                    </div>
+                    <label class="modal-label" for="new-group-name">Nom du groupe</label>
+                    <input type="text" id="new-group-name" class="modal-input" placeholder="Ex. Les potes du dimanche" autocomplete="off">
+                    <div class="modal-label" style="margin-top:16px">Ajouter des amis</div>
+                    <div class="modal-friend-list">
+                        ${FRIENDS.map((f) => `
+                            <div class="modal-friend-row" data-friend-id="${f.id}">
+                                <span class="friend-avatar" style="width:30px;height:30px;font-size:11px;background:${f.color}${f.textColor ? `;color:${f.textColor}` : ""}">${f.initials}</span>
+                                <span class="modal-friend-name">${f.name}</span>
+                                <input type="checkbox" class="modal-friend-checkbox">
+                            </div>
+                        `).join("")}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="button button-secondary" id="modal-cancel-btn">Annuler</button>
+                        <button type="button" class="button button-primary" id="modal-create-btn" disabled>Créer le groupe</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const overlay = modalRoot.querySelector<HTMLElement>(".modal-overlay");
+        const nameInput = modalRoot.querySelector<HTMLInputElement>("#new-group-name");
+        const createBtn = modalRoot.querySelector<HTMLButtonElement>("#modal-create-btn");
+
+        function refreshCreateState() {
+            if (createBtn) createBtn.disabled = !nameInput?.value.trim();
+        }
+
+        overlay?.addEventListener("click", (e) => {
+            if (e.target === overlay) closeModal();
+        });
+        modalRoot.querySelector(".modal-close")?.addEventListener("click", closeModal);
+        modalRoot.querySelector("#modal-cancel-btn")?.addEventListener("click", closeModal);
+        nameInput?.addEventListener("input", refreshCreateState);
+
+        modalRoot.querySelectorAll<HTMLElement>(".modal-friend-row").forEach((row) => {
+            const friendId = row.dataset.friendId!;
+            const checkbox = row.querySelector<HTMLInputElement>(".modal-friend-checkbox")!;
+            row.addEventListener("click", (e) => {
+                if (e.target === checkbox) return;
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event("change"));
+            });
+            checkbox.addEventListener("change", () => {
+                row.classList.toggle("is-picked", checkbox.checked);
+                if (checkbox.checked) pickedIds.add(friendId);
+                else pickedIds.delete(friendId);
+            });
+        });
+
+        createBtn?.addEventListener("click", () => {
+            const name = nameInput?.value.trim();
+            if (!name) return;
+
+            const existingIds = new Set(GROUPS.map((g) => g.id));
+            let id = slugify(name);
+            while (existingIds.has(id)) id += "-2";
+
+            GROUPS.push({id, label: name});
+            pickedIds.forEach((friendId) => {
+                const friend = FRIENDS.find((f) => f.id === friendId);
+                if (friend && !friend.groupIds.includes(id)) friend.groupIds.push(id);
+            });
+
+            closeModal();
+            selectGroup(id);
+        });
+
+        nameInput?.focus();
     }
 
     searchInput?.addEventListener("input", () => {
@@ -185,6 +293,8 @@ export function initAccueil() {
         const targets = FRIENDS.filter((f) => selectedIds.has(f.id));
         console.log("Envoi d'un jumpscare à", targets.map((f) => f.name));
     });
+
+    addGroupBtn?.addEventListener("click", openCreateGroupModal);
 
     renderGroupPills();
     renderFriendList();

@@ -144,3 +144,84 @@
     @apply flex items-center justify-center w-6 h-6 rounded-[7px] font-extrabold text-xs text-white;
     background-color: rgb(var(--color-primary));
 }
+
+.modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-6;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.modal-panel {
+    @apply w-full max-w-[380px] rounded-xl border p-5 flex flex-col;
+    background-color: #1e1f22;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+.modal-header {
+    @apply flex items-center justify-between font-extrabold text-base text-white mb-4;
+}
+
+.modal-close {
+    @apply w-7 h-7 rounded-lg border-none cursor-pointer flex items-center justify-center transition-colors;
+    background-color: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.modal-label {
+    @apply text-[11px] font-bold tracking-[.05em] uppercase mb-2;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.modal-input {
+    @apply w-full rounded-lg px-3 py-2.5 text-sm text-white border outline-none;
+    background-color: rgb(var(--color-dark));
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.modal-input:focus {
+    border-color: rgb(var(--color-primary));
+}
+
+.modal-friend-list {
+    @apply flex flex-col gap-1 max-h-[220px] overflow-y-auto rounded-lg p-1.5;
+    background-color: rgba(0, 0, 0, 0.15);
+}
+
+.modal-friend-row {
+    @apply flex items-center gap-2.5 rounded-lg px-2 py-1.5 cursor-pointer border border-transparent transition-colors;
+}
+
+.modal-friend-row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.modal-friend-row.is-picked {
+    background-color: rgba(var(--color-primary), 0.12);
+    border-color: rgba(var(--color-primary), 0.3);
+}
+
+.modal-friend-name {
+    @apply flex-1 text-sm font-semibold text-white;
+}
+
+.modal-friend-checkbox {
+    @apply w-4 h-4 cursor-pointer;
+    accent-color: rgb(var(--color-primary));
+}
+
+.modal-footer {
+    @apply flex items-center justify-end gap-2 mt-5;
+}
+
+.modal-footer .button {
+    @apply px-4 py-2 text-sm;
+}
+
+.modal-footer .button:disabled {
+    @apply opacity-40 cursor-not-allowed;
+}
