@@ -1,5 +1,5 @@
 import {getSendContext, clearSendContext, type SendRecipient} from "../utils/send-context-store.ts";
-import {getOverlaySettings, type PositionId} from "../utils/overlay-settings-store.ts";
+import {getOverlaySettings} from "../utils/overlay-settings-store.ts";
 
 type MediaTab = "file" | "url" | "gif";
 
@@ -8,18 +8,6 @@ type MediaState =
     | {type: "file"; name: string; sizeLabel: string; previewUrl: string; kind: "image" | "video"}
     | {type: "url"; url: string}
     | {type: "gif"; label: string; emoji: string; color: string};
-
-const POSITION_GRID: PositionId[] = [
-    "top-left", "top-center", "top-right",
-    "middle-left", "center", "middle-right",
-    "bottom-left", "bottom-center", "bottom-right",
-];
-
-const POSITION_LABELS: Record<PositionId, string> = {
-    "top-left": "Haut Gauche", "top-center": "Haut Centre", "top-right": "Haut Droite",
-    "middle-left": "Milieu Gauche", "center": "Centre", "middle-right": "Milieu Droite",
-    "bottom-left": "Bas Gauche", "bottom-center": "Bas Centre", "bottom-right": "Bas Droite",
-};
 
 // Amis pouvant être ajoutés comme destinataire supplémentaire — à remplacer par GET /friends.
 const ADDABLE_FRIENDS: SendRecipient[] = [
@@ -55,15 +43,12 @@ function initEnvoyer() {
 
     let activeMediaTab: MediaTab = "file";
     let media: MediaState = {type: "none"};
-    let position: PositionId = overlay.position;
     let transparent = overlay.transparent;
     let useFullVideo = false;
 
     const chipsEl = document.querySelector<HTMLElement>("#recipients-chips");
     const mediaTabsEl = document.querySelector<HTMLElement>("#media-tabs");
     const mediaPanelEl = document.querySelector<HTMLElement>("#media-panel");
-    const positionGridEl = document.querySelector<HTMLElement>("#send-position-grid");
-    const positionLabelEl = document.querySelector<HTMLElement>("#send-position-label");
     const durationSlider = document.querySelector<HTMLInputElement>("#duration-slider");
     const durationValueEl = document.querySelector<HTMLElement>("#duration-value");
     const volumeSlider = document.querySelector<HTMLInputElement>("#send-volume-slider");
@@ -298,21 +283,6 @@ function initEnvoyer() {
         });
     });
 
-    function renderPositionGrid() {
-        if (!positionGridEl) return;
-        positionGridEl.innerHTML = POSITION_GRID.map((pos) => `<button type="button" class="position-cell${pos === position ? " is-active" : ""}" data-position="${pos}" aria-label="${pos}"></button>`).join("");
-        if (positionLabelEl) positionLabelEl.textContent = POSITION_LABELS[position];
-
-        positionGridEl.querySelectorAll<HTMLButtonElement>(".position-cell").forEach((cell) => {
-            cell.addEventListener("click", () => {
-                position = cell.dataset.position as PositionId;
-                positionGridEl.querySelectorAll(".position-cell").forEach((c) => c.classList.remove("is-active"));
-                cell.classList.add("is-active");
-                if (positionLabelEl) positionLabelEl.textContent = POSITION_LABELS[position];
-            });
-        });
-    }
-
     function paintSlider(slider: HTMLInputElement, value: number, max: number) {
         const pct = (value / max) * 100;
         slider.style.background = `linear-gradient(to right, rgb(var(--color-primary)) ${pct}%, rgba(255,255,255,.1) ${pct}%)`;
@@ -374,7 +344,6 @@ function initEnvoyer() {
             duration: useFullVideo ? null : Number(durationSlider?.value ?? 40) / 10,
             useFullVideo,
             volume: Number(volumeSlider?.value ?? overlay.volume),
-            position,
             transparent,
         };
         console.log("Envoi du jumpscare :", payload);
@@ -391,7 +360,6 @@ function initEnvoyer() {
 
     renderRecipients();
     renderMediaPanel();
-    renderPositionGrid();
     renderTransparentToggle();
     refreshSubmitState();
 }

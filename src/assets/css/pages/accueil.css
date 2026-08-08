@@ -36,7 +36,7 @@
 .friend-item-online {
     background-color: rgba(var(--color-primary), 0.08);
     border-color: rgba(var(--color-primary), 0.2);
-    @apply transition-colors;
+    @apply transition-colors cursor-pointer;
 }
 
 .friend-item-online.is-deselected {

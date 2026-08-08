@@ -206,11 +206,13 @@ export function initAccueil() {
         friendListEl!.querySelectorAll<HTMLElement>(".friend-item-online").forEach((item) => {
             const friendId = item.dataset.friendId!;
 
-            item.querySelector(".select-check")?.addEventListener("click", () => {
+            item.addEventListener("click", (e) => {
+                if ((e.target as HTMLElement).closest(".mute-btn")) return;
                 toggleSelection(friendId);
             });
 
-            item.querySelector(".mute-btn")?.addEventListener("click", () => {
+            item.querySelector(".mute-btn")?.addEventListener("click", (e) => {
+                e.stopPropagation();
                 toggleMute(friendId);
             });
         });

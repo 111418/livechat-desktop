@@ -283,37 +283,9 @@ body > main {
     @apply font-bold text-[12.5px] text-white block;
 }
 
-.position-picker-row {
-    @apply flex gap-2.5 items-center;
-}
-
-.position-grid {
-    @apply grid gap-[3px] rounded-[6px] p-[5px] shrink-0;
-    width: 84px;
-    height: 53px;
-    background-color: #0c0d10;
-    border: 1.5px solid rgba(255, 255, 255, 0.1);
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-}
-
-.position-cell {
-    @apply rounded-[2px] border-none cursor-pointer p-0 transition-colors;
-    background-color: rgba(255, 255, 255, 0.06);
-}
-
-.position-cell:hover {
-    background-color: rgba(255, 255, 255, 0.14);
-}
-
-.position-cell.is-active {
-    background-color: rgb(var(--color-primary));
-    box-shadow: 0 0 7px rgba(151, 103, 241, 0.8);
-}
-
-.position-label-small {
-    @apply font-bold text-xs;
-    color: #b5bac1;
+.position-owner-hint {
+    @apply text-[11px] font-medium leading-snug -mt-2;
+    color: rgba(255, 255, 255, 0.35);
 }
 
 .transparent-toggle-row {
