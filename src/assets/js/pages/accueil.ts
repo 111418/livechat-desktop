@@ -292,6 +292,7 @@ export function initAccueil() {
                             </div>
                         `).join("")}
                     </div>
+                    <p class="modal-error" id="modal-error" hidden>Sélectionne au moins 2 amis pour créer un groupe.</p>
                     <div class="modal-footer">
                         <button type="button" class="button button-secondary" id="modal-cancel-btn">Annuler</button>
                         <button type="button" class="button button-primary" id="modal-create-btn" disabled>Créer le groupe</button>
@@ -303,9 +304,14 @@ export function initAccueil() {
         const overlay = modalRoot.querySelector<HTMLElement>(".modal-overlay");
         const nameInput = modalRoot.querySelector<HTMLInputElement>("#new-group-name");
         const createBtn = modalRoot.querySelector<HTMLButtonElement>("#modal-create-btn");
+        const errorEl = modalRoot.querySelector<HTMLElement>("#modal-error");
 
         function refreshCreateState() {
             if (createBtn) createBtn.disabled = !nameInput?.value.trim();
+        }
+
+        function hideError() {
+            if (errorEl) errorEl.hidden = true;
         }
 
         overlay?.addEventListener("click", (e) => {
@@ -327,12 +333,18 @@ export function initAccueil() {
                 row.classList.toggle("is-picked", checkbox.checked);
                 if (checkbox.checked) pickedIds.add(friendId);
                 else pickedIds.delete(friendId);
+                hideError();
             });
         });
 
         createBtn?.addEventListener("click", () => {
             const name = nameInput?.value.trim();
             if (!name) return;
+
+            if (pickedIds.size < 2) {
+                if (errorEl) errorEl.hidden = false;
+                return;
+            }
 
             const existingIds = new Set(GROUPS.map((g) => g.id));
             let id = slugify(name);
