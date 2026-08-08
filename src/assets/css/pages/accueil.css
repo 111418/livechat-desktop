@@ -9,8 +9,8 @@
     top: -10px;
     right: -7px;
     background: #ed6a5e;
-    @apply w-5 h-5 leading-tight absolute justify-center align-baseline items-center rounded-full ;
-
+    font-size: 11px;
+    @apply w-5 h-5 leading-none absolute flex justify-center items-center rounded-full;
 }
 
 #friend-list {
@@ -171,6 +171,20 @@
     background-color: #1e1f22;
     border-color: rgba(255, 255, 255, 0.08);
     box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+}
+
+.modal-message {
+    @apply text-sm leading-relaxed;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.button-danger {
+    background-color: rgba(var(--color-red), 0.85);
+    border-color: rgb(var(--color-red));
+}
+
+.button-danger:hover {
+    background-color: rgb(var(--color-red));
 }
 
 .modal-header {

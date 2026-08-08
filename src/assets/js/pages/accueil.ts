@@ -92,22 +92,23 @@ export function initAccueil() {
     function deleteGroup(groupId: string) {
         const group = GROUPS.find((g) => g.id === groupId);
         if (!group) return;
-        if (!confirm(`Quitter le groupe « ${group.label} » ?`)) return;
 
-        const index = GROUPS.findIndex((g) => g.id === groupId);
-        if (index !== -1) GROUPS.splice(index, 1);
-        FRIENDS.forEach((f) => {
-            f.groupIds = f.groupIds.filter((id) => id !== groupId);
+        openConfirmModal(`Quitter le groupe « ${group.label} » ?`, "Quitter", () => {
+            const index = GROUPS.findIndex((g) => g.id === groupId);
+            if (index !== -1) GROUPS.splice(index, 1);
+            FRIENDS.forEach((f) => {
+                f.groupIds = f.groupIds.filter((id) => id !== groupId);
+            });
+
+            if (activeGroupId === groupId) {
+                activeGroupId = ALL_GROUP_ID;
+                selectedIds.clear();
+            }
+
+            renderGroupPills();
+            renderFriendList();
+            updateSelectionBar();
         });
-
-        if (activeGroupId === groupId) {
-            activeGroupId = ALL_GROUP_ID;
-            selectedIds.clear();
-        }
-
-        renderGroupPills();
-        renderFriendList();
-        updateSelectionBar();
     }
 
     function renderFriendItem(friend: Friend): string {
@@ -235,6 +236,37 @@ export function initAccueil() {
 
     function closeModal() {
         if (modalRoot) modalRoot.innerHTML = "";
+    }
+
+    function openConfirmModal(message: string, confirmLabel: string, onConfirm: () => void) {
+        if (!modalRoot) return;
+
+        modalRoot.innerHTML = `
+            <div class="modal-overlay">
+                <div class="modal-panel">
+                    <div class="modal-header">
+                        <span>Confirmation</span>
+                        <button type="button" class="modal-close" aria-label="Fermer">✕</button>
+                    </div>
+                    <p class="modal-message">${message}</p>
+                    <div class="modal-footer">
+                        <button type="button" class="button button-secondary" id="confirm-cancel-btn">Annuler</button>
+                        <button type="button" class="button button-danger" id="confirm-ok-btn">${confirmLabel}</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const overlay = modalRoot.querySelector<HTMLElement>(".modal-overlay");
+        overlay?.addEventListener("click", (e) => {
+            if (e.target === overlay) closeModal();
+        });
+        modalRoot.querySelector(".modal-close")?.addEventListener("click", closeModal);
+        modalRoot.querySelector("#confirm-cancel-btn")?.addEventListener("click", closeModal);
+        modalRoot.querySelector("#confirm-ok-btn")?.addEventListener("click", () => {
+            closeModal();
+            onConfirm();
+        });
     }
 
     function openCreateGroupModal() {
