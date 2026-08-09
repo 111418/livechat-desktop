@@ -1,6 +1,8 @@
 import {initials} from "../utils/avatar.ts";
-import {getAccount, setUsername} from "../utils/account-store.ts";
+import {getAccount, setAccount} from "../utils/account-store.ts";
 import {getOverlaySettings, setOverlaySettings, type PositionId} from "../utils/overlay-settings-store.ts";
+import {getServerUrl, setServerUrl, clearToken} from "../services/config.ts";
+import {apiRequest} from "../services/api.ts";
 
 type Tab = "compte" | "overlay" | "serveur" | "securite";
 
@@ -24,15 +26,11 @@ const POSITION_LABELS: Record<PositionId, string> = {
 
 const account = getAccount();
 
-const server = {
-    url: "wss://livechat.111418.gg/ws",
-    pingMs: 24,
-};
-
 const overlaySettings = getOverlaySettings();
 
-function initAccount(): void {
+async function initAccount(): Promise<void> {
     let activeTab: Tab = "overlay";
+    let serverUrl = (await getServerUrl()) ?? "";
 
     const navEl = document.querySelector<HTMLElement>("#settings-nav");
     const contentEl = document.querySelector<HTMLElement>("#settings-content");
@@ -49,10 +47,10 @@ function initAccount(): void {
     function accountCard(): string {
         return `
             <div class="settings-card">
-                <div class="settings-avatar">${initials(account.username)}</div>
+                <div class="settings-avatar">${initials(account.username || account.discordId)}</div>
                 <div class="settings-name-col">
-                    <span class="settings-name">${account.username}</span>
-                    <span class="settings-subtext">Discord · #${account.tag}</span>
+                    <span class="settings-name">${account.username || account.discordId}</span>
+                    <span class="settings-subtext">Discord · #${account.discordId.slice(-4)}</span>
                 </div>
                 <button type="button" class="settings-btn settings-btn-danger" id="account-logout-btn">Déconnexion</button>
             </div>
@@ -65,9 +63,8 @@ function initAccount(): void {
                 <span class="settings-icon-badge">🛰</span>
                 <div class="settings-name-col">
                     <span class="settings-name" style="font-size:12.5px">Serveur</span>
-                    <span class="settings-subtext" style="font-family:ui-monospace,'SF Mono',Consolas,monospace">${server.url}</span>
+                    <span class="settings-subtext" style="font-family:ui-monospace,'SF Mono',Consolas,monospace">${serverUrl}</span>
                 </div>
-                <span class="settings-ping">${server.pingMs} ms</span>
                 <button type="button" class="settings-btn" id="server-change-btn">Changer</button>
             </div>
         `;
@@ -182,13 +179,19 @@ function initAccount(): void {
     function wireUsernameForm() {
         const input = contentEl!.querySelector<HTMLInputElement>("#username-input");
         const saveBtn = contentEl!.querySelector<HTMLButtonElement>("#username-save-btn");
-        saveBtn?.addEventListener("click", () => {
+        saveBtn?.addEventListener("click", async () => {
             const value = input?.value.trim();
-            if (!value) return;
-            account.username = value;
-            setUsername(value);
-            console.log("Pseudo mis à jour :", value);
-            renderContent();
+            if (!value || !saveBtn) return;
+            saveBtn.disabled = true;
+            try {
+                await apiRequest("/auth/username", {method: "PATCH", body: {username: value}});
+                account.username = value;
+                setAccount(account);
+                renderContent();
+            } catch (err) {
+                window.alert(err instanceof Error ? err.message : "Impossible de mettre à jour le pseudo.");
+                saveBtn.disabled = false;
+            }
         });
     }
 
@@ -200,16 +203,16 @@ function initAccount(): void {
                 <div class="settings-card-column">
                     <div class="settings-section-label" style="margin-bottom:10px">Nouvelle URL du serveur</div>
                     <div class="settings-inline-form" style="margin-top:0">
-                        <input type="text" id="server-url-input" class="settings-input" value="${server.url}" autocomplete="off">
+                        <input type="text" id="server-url-input" class="settings-input" value="${serverUrl}" autocomplete="off">
                         <button type="button" class="button button-primary" id="server-save-btn" style="padding:8px 16px;font-size:13px">Enregistrer</button>
                     </div>
                 </div>
             `;
-            zone.querySelector<HTMLButtonElement>("#server-save-btn")?.addEventListener("click", () => {
+            zone.querySelector<HTMLButtonElement>("#server-save-btn")?.addEventListener("click", async () => {
                 const value = zone.querySelector<HTMLInputElement>("#server-url-input")?.value.trim();
                 if (!value) return;
-                server.url = value;
-                console.log("Serveur mis à jour :", value);
+                serverUrl = value;
+                await setServerUrl(value);
                 renderContent();
             });
         });
@@ -221,8 +224,8 @@ function initAccount(): void {
         });
     }
 
-    function logout() {
-        console.log("Déconnexion");
+    async function logout() {
+        await clearToken();
         window.location.href = "./login.html";
     }
 

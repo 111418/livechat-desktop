@@ -1,23 +1,28 @@
 import { invoke } from "@tauri-apps/api/core";
 import { initials } from "./assets/js/utils/avatar.ts";
-import { getAccount } from "./assets/js/utils/account-store.ts";
+import { getAccount, setAccount, type Account } from "./assets/js/utils/account-store.ts";
 import { initAccueil } from "./assets/js/pages/accueil.ts";
 import { initLogin } from "./assets/js/pages/login.ts";
 import { onSocket } from "./assets/js/services/socket.ts";
+import { fetchMe } from "./assets/js/services/me.ts";
 
 let greetInputEl: HTMLInputElement | null;
 let greetMsgEl: HTMLElement | null;
 
-const account = getAccount();
-const userAvatar = document.querySelector("#user-avatar");
-if (userAvatar) userAvatar.textContent = initials(account.username);
+function renderAccount(account: Account) {
+  const userAvatar = document.querySelector("#user-avatar");
+  if (userAvatar) userAvatar.textContent = initials(account.username || account.discordId);
 
-const usernameDisplay = document.querySelector("#username-display");
-if (usernameDisplay) usernameDisplay.textContent = account.username;
+  const usernameDisplay = document.querySelector("#username-display");
+  if (usernameDisplay) usernameDisplay.textContent = account.username || account.discordId;
 
-const usertagDisplay = document.querySelector("#usertag-display");
-if (usertagDisplay) usertagDisplay.textContent = `#${account.tag}`;
+  const usertagDisplay = document.querySelector("#usertag-display");
+  if (usertagDisplay) usertagDisplay.textContent = account.discordId ? `#${account.discordId.slice(-4)}` : "";
+}
 
+// Peint le cache local tout de suite (pas d'attente réseau), puis rafraîchit
+// depuis GET /auth/me — la source de vérité reste toujours le backend.
+renderAccount(getAccount());
 
 async function greet() {
   if (greetMsgEl && greetInputEl) {
@@ -49,5 +54,16 @@ window.addEventListener("DOMContentLoaded", () => {
     onSocket("livechat", (payload) => {
       invoke("show_overlay", { payload });
     });
+
+    fetchMe()
+      .then((me) => {
+        const account: Account = { username: me.username || "", discordId: me.discord_id };
+        setAccount(account);
+        renderAccount(account);
+      })
+      .catch(() => {
+        // Pas de session valide (token expiré/révoqué côté serveur) — on garde
+        // l'affichage en cache, rien de plus à faire ici.
+      });
   }
 });

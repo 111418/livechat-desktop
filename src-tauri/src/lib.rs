@@ -27,8 +27,9 @@ struct LivechatPayload {
 fn show_overlay(app: tauri::AppHandle, payload: LivechatPayload) -> Result<(), String> {
     let window = app.get_webview_window("overlay").ok_or("overlay window not found")?;
     window.emit_to("overlay", "livechat", payload).map_err(|e| e.to_string())?;
+    // Pas de set_focus() : la fenêtre est click-through et ne doit jamais voler le
+    // focus clavier/souris à l'application au premier plan (jeu, etc.).
     window.show().map_err(|e| e.to_string())?;
-    window.set_focus().map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -60,15 +61,32 @@ pub fn run() {
             // Fenêtre overlay pour l'affichage plein écran des jumpscares reçus :
             // transparente, sans décorations, toujours au premier plan, cachée au
             // démarrage — montrée à la demande via la commande show_overlay.
-            WebviewWindowBuilder::new(app, "overlay", WebviewUrl::App("overlay.html".into()))
+            //
+            // On évite volontairement `.fullscreen(true)` : sur macOS, le mode
+            // fullscreen natif fait basculer la fenêtre dans un Space dédié (donc
+            // potentiellement un autre écran que celui affiché) et casse la
+            // transparence (fond qui devient noir). À la place, on dimensionne et
+            // positionne manuellement la fenêtre pour qu'elle recouvre exactement
+            // l'écran principal, ce qui reste une fenêtre "normale" superposée.
+            let overlay_window = WebviewWindowBuilder::new(app, "overlay", WebviewUrl::App("overlay.html".into()))
                 .title("livechat-overlay")
                 .visible(false)
                 .decorations(false)
                 .transparent(true)
+                .shadow(false)
                 .always_on_top(true)
                 .skip_taskbar(true)
-                .fullscreen(true)
                 .build()?;
+
+            if let Some(monitor) = overlay_window.primary_monitor()? {
+                overlay_window.set_size(*monitor.size())?;
+                overlay_window.set_position(*monitor.position())?;
+            }
+
+            // Ni le fond transparent ni le jumpscare lui-même ne doivent intercepter
+            // les clics : la fenêtre laisse passer la souris vers ce qu'il y a
+            // dessous (jeu, bureau...) en permanence.
+            overlay_window.set_ignore_cursor_events(true)?;
 
             Ok(())
         })
