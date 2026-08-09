@@ -1,0 +1,27 @@
+@reference "../tailwind.css";
+
+html, body {
+    @apply w-screen h-screen overflow-hidden m-0 p-0;
+    background: transparent;
+}
+
+#overlay-root {
+    @apply w-screen h-screen flex flex-col items-center justify-center gap-6;
+}
+
+#overlay-root.is-opaque {
+    background: rgb(var(--color-dark));
+}
+
+#overlay-media {
+    @apply max-w-[90vw] max-h-[80vh] flex items-center justify-center;
+
+    img, video {
+        @apply max-w-full max-h-full object-contain rounded-xl;
+    }
+}
+
+#overlay-message {
+    @apply text-3xl font-black text-white text-center px-8;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}

@@ -3,10 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <title>Overlay</title>
-    <link rel="stylesheet" href="assets/css/tailwind.css" />
-    <link rel="stylesheet" href="./styles.scss" />
+    <link rel="stylesheet" href="./assets/css/tailwind.css" />
+    <link rel="stylesheet" href="./assets/css/pages/overlay.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script type="module" src="./assets/js/pages/overlay.ts" defer></script>
 </head>
 <body>
-
+    <div id="overlay-root">
+        <div id="overlay-media"></div>
+        <p id="overlay-message" hidden></p>
+    </div>
 </body>
 </html>

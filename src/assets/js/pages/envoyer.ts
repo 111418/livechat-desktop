@@ -1,31 +1,12 @@
 import {getSendContext, clearSendContext, type SendRecipient} from "../utils/send-context-store.ts";
 import {getOverlaySettings} from "../utils/overlay-settings-store.ts";
-
-type MediaTab = "file" | "url" | "gif";
+import {fetchFriends} from "../services/friends.ts";
+import {apiRequest, ApiError} from "../services/api.ts";
+import {onSocket} from "../services/socket.ts";
 
 type MediaState =
     | {type: "none"}
-    | {type: "file"; name: string; sizeLabel: string; previewUrl: string; kind: "image" | "video"}
-    | {type: "url"; url: string}
-    | {type: "gif"; label: string; emoji: string; color: string};
-
-// Amis pouvant être ajoutés comme destinataire supplémentaire — à remplacer par GET /friends.
-const ADDABLE_FRIENDS: SendRecipient[] = [
-    {id: "nour", name: "Nour", initials: "NR", color: "#5865F2"},
-    {id: "theo", name: "Théo", initials: "TH", color: "#ED6A5E"},
-    {id: "maya", name: "Maya", initials: "MA", color: "#F4BD50", textColor: "#3a2a00"},
-    {id: "sami", name: "Sami", initials: "SA", color: "#3a3b40"},
-    {id: "lea", name: "Léa", initials: "LE", color: "#3a3b40"},
-];
-
-const MOCK_GIFS = [
-    {emoji: "👻", label: "boo.gif", color: "#5865F2"},
-    {emoji: "😱", label: "scream.gif", color: "#ED6A5E"},
-    {emoji: "🤡", label: "clown.gif", color: "#F4BD50"},
-    {emoji: "💀", label: "skull.gif", color: "#3a3b40"},
-    {emoji: "🐸", label: "kermit.gif", color: "#3BA55D"},
-    {emoji: "🕷️", label: "spider.gif", color: "#6441A5"},
-];
+    | {type: "file"; file: File; name: string; sizeLabel: string; previewUrl: string; kind: "image" | "video"};
 
 function formatSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} o`;
@@ -34,20 +15,20 @@ function formatSize(bytes: number): string {
     return `${(kb / 1024).toFixed(1).replace(".", ",")} Mo`;
 }
 
-function initEnvoyer() {
+async function initEnvoyer() {
     const context = getSendContext();
     const overlay = getOverlaySettings();
 
     let recipients: SendRecipient[] = context?.recipients ? [...context.recipients] : [];
     const groupLabel = context?.groupLabel ?? null;
+    let addableFriends: SendRecipient[] = [];
+    const onlineIds = new Set<string>();
 
-    let activeMediaTab: MediaTab = "file";
     let media: MediaState = {type: "none"};
     let transparent = overlay.transparent;
     let useFullVideo = false;
 
     const chipsEl = document.querySelector<HTMLElement>("#recipients-chips");
-    const mediaTabsEl = document.querySelector<HTMLElement>("#media-tabs");
     const mediaPanelEl = document.querySelector<HTMLElement>("#media-panel");
     const durationSlider = document.querySelector<HTMLInputElement>("#duration-slider");
     const durationValueEl = document.querySelector<HTMLElement>("#duration-value");
@@ -75,15 +56,20 @@ function initEnvoyer() {
     });
 
     function renderRecipients() {
-        const chips = recipients.map((r) => `
-            <span class="recipient-chip" data-recipient-id="${r.id}">
-                <span class="recipient-chip-avatar" style="background:${r.color}${r.textColor ? `;color:${r.textColor}` : ""}">${r.initials}</span>
-                ${r.name}
-                <button type="button" class="recipient-chip-remove" data-remove-recipient="${r.id}" aria-label="Retirer ${r.name}">✕</button>
-            </span>
-        `).join("");
+        const chips = recipients.map((r) => {
+            const offlineWarning = !onlineIds.has(r.id)
+                ? `<span class="recipient-chip-offline" title="Hors ligne — l'envoi n'est pas garanti">●</span>`
+                : "";
+            return `
+                <span class="recipient-chip" data-recipient-id="${r.id}">
+                    <span class="recipient-chip-avatar" style="background:${r.color}${r.textColor ? `;color:${r.textColor}` : ""}">${r.initials}</span>
+                    ${r.name}${offlineWarning}
+                    <button type="button" class="recipient-chip-remove" data-remove-recipient="${r.id}" aria-label="Retirer ${r.name}">✕</button>
+                </span>
+            `;
+        }).join("");
 
-        const addableLeft = ADDABLE_FRIENDS.filter((f) => !recipients.some((r) => r.id === f.id));
+        const addableLeft = addableFriends.filter((f) => !recipients.some((r) => r.id === f.id));
         const addChip = addableLeft.length
             ? `
                 <span class="add-recipient-wrap">
@@ -127,7 +113,7 @@ function initEnvoyer() {
 
         dropdown?.querySelectorAll<HTMLButtonElement>("[data-add-friend-id]").forEach((option) => {
             option.addEventListener("click", () => {
-                const friend = ADDABLE_FRIENDS.find((f) => f.id === option.dataset.addFriendId);
+                const friend = addableFriends.find((f) => f.id === option.dataset.addFriendId);
                 if (!friend) return;
                 recipients.push(friend);
                 renderRecipients();
@@ -158,96 +144,29 @@ function initEnvoyer() {
     });
 
     function renderMediaPanel() {
-        mediaTabsEl?.querySelectorAll<HTMLButtonElement>(".media-tab").forEach((tab) => {
-            tab.classList.toggle("is-active", tab.dataset.mediaTab === activeMediaTab);
-        });
-
-        if (activeMediaTab === "file") {
-            if (media.type === "file") {
-                mediaPanelEl!.innerHTML = `
-                    <div class="media-dropzone" style="cursor:default">
-                        <span class="media-type-badge">${media.kind === "video" ? "VIDÉO" : "IMAGE"}</span>
-                        ${media.kind === "video"
-                            ? `<video class="media-preview-video" src="${media.previewUrl}" muted autoplay loop></video>`
-                            : `<img class="media-preview-img" src="${media.previewUrl}" alt="">`}
-                    </div>
-                    <div class="media-info-bar">
-                        <span class="media-info-name">${media.name}</span>
-                        <span class="media-info-meta">${media.sizeLabel}</span>
-                        <button type="button" class="media-remove-btn" id="media-remove-btn">Retirer</button>
-                    </div>
-                `;
-            } else {
-                mediaPanelEl!.innerHTML = `
-                    <div class="media-dropzone" id="file-dropzone">
-                        <div class="media-dropzone-icon">▶</div>
-                        <span class="media-dropzone-label">Aperçu du média</span>
-                        <span class="media-dropzone-hint">Clique pour choisir une image ou une vidéo</span>
-                    </div>
-                `;
-                mediaPanelEl!.querySelector("#file-dropzone")?.addEventListener("click", () => fileInput.click());
-            }
-        } else if (activeMediaTab === "url") {
-            if (media.type === "url") {
-                mediaPanelEl!.innerHTML = `
-                    <div class="media-dropzone" style="cursor:default">
-                        <img class="media-preview-img" src="${media.url}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Impossible de charger cette URL',className:'media-dropzone-hint'}))">
-                    </div>
-                    <div class="media-info-bar">
-                        <span class="media-info-name" style="font-family:ui-monospace,'SF Mono',Consolas,monospace;font-size:11.5px">${media.url}</span>
-                        <button type="button" class="media-remove-btn" id="media-remove-btn">Retirer</button>
-                    </div>
-                `;
-            } else {
-                mediaPanelEl!.innerHTML = `
-                    <div class="media-url-form">
-                        <input type="text" id="media-url-input" placeholder="https://exemple.com/media.gif" autocomplete="off">
-                        <button type="button" class="button button-primary" id="media-url-load-btn" style="padding:9px 18px;font-size:13px">Charger l'aperçu</button>
-                    </div>
-                `;
-                mediaPanelEl!.querySelector("#media-url-load-btn")?.addEventListener("click", () => {
-                    const url = mediaPanelEl!.querySelector<HTMLInputElement>("#media-url-input")?.value.trim();
-                    if (!url) return;
-                    media = {type: "url", url};
-                    renderMediaPanel();
-                    refreshSubmitState();
-                });
-            }
+        if (media.type === "file") {
+            mediaPanelEl!.innerHTML = `
+                <div class="media-dropzone" style="cursor:default">
+                    <span class="media-type-badge">${media.kind === "video" ? "VIDÉO" : "IMAGE"}</span>
+                    ${media.kind === "video"
+                        ? `<video class="media-preview-video" src="${media.previewUrl}" muted autoplay loop></video>`
+                        : `<img class="media-preview-img" src="${media.previewUrl}" alt="">`}
+                </div>
+                <div class="media-info-bar">
+                    <span class="media-info-name">${media.name}</span>
+                    <span class="media-info-meta">${media.sizeLabel}</span>
+                    <button type="button" class="media-remove-btn" id="media-remove-btn">Retirer</button>
+                </div>
+            `;
         } else {
-            if (media.type === "gif") {
-                mediaPanelEl!.innerHTML = `
-                    <div class="media-dropzone" style="cursor:default;background:${media.color}">
-                        <span style="font-size:54px">${media.emoji}</span>
-                    </div>
-                    <div class="media-info-bar">
-                        <span class="media-info-name">${media.label}</span>
-                        <button type="button" class="media-remove-btn" id="media-remove-btn">Retirer</button>
-                    </div>
-                `;
-            } else {
-                mediaPanelEl!.innerHTML = `
-                    <div class="gif-grid">
-                        ${MOCK_GIFS.map((g) => `
-                            <button type="button" class="gif-tile" style="background:${g.color}" data-gif-label="${g.label}" data-gif-emoji="${g.emoji}" data-gif-color="${g.color}">
-                                ${g.emoji}
-                                <span class="gif-tile-label">${g.label}</span>
-                            </button>
-                        `).join("")}
-                    </div>
-                `;
-                mediaPanelEl!.querySelectorAll<HTMLButtonElement>(".gif-tile").forEach((tile) => {
-                    tile.addEventListener("click", () => {
-                        media = {
-                            type: "gif",
-                            label: tile.dataset.gifLabel!,
-                            emoji: tile.dataset.gifEmoji!,
-                            color: tile.dataset.gifColor!,
-                        };
-                        renderMediaPanel();
-                        refreshSubmitState();
-                    });
-                });
-            }
+            mediaPanelEl!.innerHTML = `
+                <div class="media-dropzone" id="file-dropzone">
+                    <div class="media-dropzone-icon">▶</div>
+                    <span class="media-dropzone-label">Aperçu du média</span>
+                    <span class="media-dropzone-hint">Clique pour choisir une image ou une vidéo</span>
+                </div>
+            `;
+            mediaPanelEl!.querySelector("#file-dropzone")?.addEventListener("click", () => fileInput.click());
         }
 
         mediaPanelEl!.querySelector("#media-remove-btn")?.addEventListener("click", () => {
@@ -266,6 +185,7 @@ function initEnvoyer() {
         revokePreview();
         media = {
             type: "file",
+            file,
             name: file.name,
             sizeLabel: formatSize(file.size),
             previewUrl: URL.createObjectURL(file),
@@ -274,13 +194,6 @@ function initEnvoyer() {
         fileInput.value = "";
         renderMediaPanel();
         refreshSubmitState();
-    });
-
-    mediaTabsEl?.querySelectorAll<HTMLButtonElement>(".media-tab").forEach((tab) => {
-        tab.addEventListener("click", () => {
-            activeMediaTab = tab.dataset.mediaTab as MediaTab;
-            renderMediaPanel();
-        });
     });
 
     function paintSlider(slider: HTMLInputElement, value: number, max: number) {
@@ -334,34 +247,68 @@ function initEnvoyer() {
         }
     }
 
-    submitBtn?.addEventListener("click", () => {
-        if (submitBtn.disabled) return;
-
-        const payload = {
-            recipients: recipients.map((r) => r.id),
-            media,
-            message: messageInput?.value.trim() || null,
-            duration: useFullVideo ? null : Number(durationSlider?.value ?? 40) / 10,
-            useFullVideo,
-            volume: Number(volumeSlider?.value ?? overlay.volume),
-            transparent,
-        };
-        console.log("Envoi du jumpscare :", payload);
+    submitBtn?.addEventListener("click", async () => {
+        if (submitBtn.disabled || media.type !== "file") return;
 
         submitBtn.disabled = true;
-        submitBtn.classList.add("is-sent");
-        submitBtn.textContent = "✓ Envoyé";
-        clearSendContext();
+        const originalLabel = submitBtn.textContent;
+        submitBtn.textContent = "Envoi en cours…";
 
-        window.setTimeout(() => {
-            window.location.href = "./index.html";
-        }, 900);
+        const form = new FormData();
+        form.append("file", media.file);
+        if (messageInput?.value.trim()) form.append("message", messageInput.value.trim());
+        form.append("transparent", String(transparent));
+        if (!useFullVideo) {
+            form.append("duration", String(Number(durationSlider?.value ?? 40) / 10));
+        }
+
+        const ids = recipients.map((r) => r.id).join(",");
+
+        try {
+            await apiRequest(`/send-to/${ids}`, {method: "POST", formData: form});
+
+            submitBtn.classList.add("is-sent");
+            submitBtn.textContent = "✓ Envoyé";
+            clearSendContext();
+
+            window.setTimeout(() => {
+                window.location.href = "./index.html";
+            }, 900);
+        } catch (err) {
+            const message = err instanceof ApiError
+                ? err.message
+                : "Impossible d'envoyer le jumpscare.";
+            window.alert(message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalLabel;
+        }
+    });
+
+    onSocket("friends_online", (list) => {
+        onlineIds.clear();
+        list.forEach((p) => onlineIds.add(p.user_id));
+        renderRecipients();
+    });
+    onSocket("friend_online", (p) => {
+        onlineIds.add(p.user_id);
+        renderRecipients();
+    });
+    onSocket("friend_offline", (p) => {
+        onlineIds.delete(p.user_id);
+        renderRecipients();
     });
 
     renderRecipients();
     renderMediaPanel();
     renderTransparentToggle();
     refreshSubmitState();
+
+    try {
+        addableFriends = await fetchFriends();
+        renderRecipients();
+    } catch {
+        // liste d'amis indisponible — on garde uniquement les destinataires déjà présélectionnés
+    }
 }
 
 initEnvoyer();

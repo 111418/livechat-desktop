@@ -1,24 +1,29 @@
-import { initials } from "../utils/avatar.ts";
+import { initials, colorFromId } from "../utils/avatar.ts";
+import { apiRequest } from "../services/api.ts";
+import { onSocket } from "../services/socket.ts";
+
+// L'API ne documente pas de champ username sur FriendRequest (seulement
+// sender_id/receiver_id) — on tente sender_username/receiver_username si le
+// serveur les fournit (comme pour /friends), sinon on affiche l'id brut.
+interface ApiFriendRequest {
+    sender_id: string;
+    receiver_id: string;
+    sender_username?: string | null;
+    receiver_username?: string | null;
+    is_rejected?: boolean;
+    isRejected?: boolean;
+}
 
 interface FriendRequest {
-    id: string;
+    id: string; // discord id de l'autre utilisateur
     name: string;
-    handle: string;
-    tag: string;
-    avatarColor: string;
-    avatarTextColor?: string;
 }
 
 type Tab = "received" | "sent";
 
-let received: FriendRequest[] = [
-    {id: "lola", name: "Lola", handle: "lola", tag: "2207", avatarColor: "#1DA1F2"},
-    {id: "yanis", name: "Yanis", handle: "yanis", tag: "8830", avatarColor: "#3BA55D"},
-];
-
-let sent: FriendRequest[] = [
-    {id: "rayan", name: "Rayan", handle: "rayan", tag: "5512", avatarColor: "#F4BD50", avatarTextColor: "#3a2a00"},
-];
+function toDisplay(id: string, username?: string | null): FriendRequest {
+    return { id, name: username || id };
+}
 
 export function initDemandes() {
     const tabsEl = document.querySelector<HTMLElement>("#demandes-tabs");
@@ -29,6 +34,8 @@ export function initDemandes() {
     if (!tabsEl || !listEl) return;
 
     let activeTab: Tab = "received";
+    let received: FriendRequest[] = [];
+    let sent: FriendRequest[] = [];
 
     function renderTabs() {
         if (receivedCountEl) receivedCountEl.textContent = String(received.length);
@@ -40,7 +47,8 @@ export function initDemandes() {
     }
 
     function renderAvatar(request: FriendRequest): string {
-        const style = `background:${request.avatarColor}${request.avatarTextColor ? `;color:${request.avatarTextColor}` : ""}`;
+        const { color, textColor } = colorFromId(request.id);
+        const style = `background:${color}${textColor ? `;color:${textColor}` : ""}`;
         return `<div class="request-avatar" style="${style}">${initials(request.name)}</div>`;
     }
 
@@ -57,7 +65,6 @@ export function initDemandes() {
                         ${renderAvatar(r)}
                         <div class="request-name-col">
                             <span class="request-name">${r.name}</span>
-                            <span class="request-handle">@${r.handle} · #${r.tag}</span>
                         </div>
                         <div class="request-actions">
                             <button type="button" class="accept-btn" data-accept="${r.id}">
@@ -88,7 +95,6 @@ export function initDemandes() {
                         ${renderAvatar(r)}
                         <div class="request-name-col">
                             <span class="request-name">${r.name}</span>
-                            <span class="request-handle">@${r.handle} · #${r.tag}</span>
                         </div>
                         <span class="pending-badge">
                             <img src="./assets/svg/icons/clock.svg" alt="">
@@ -105,18 +111,25 @@ export function initDemandes() {
         }
     }
 
-    function respondToRequest(id: string, action: "accept" | "reject") {
-        received = received.filter((r) => r.id !== id);
-        console.log(action === "accept" ? "Demande acceptée :" : "Demande refusée :", id);
-        renderTabs();
-        renderList();
+    async function respondToRequest(id: string, action: "accept" | "reject") {
+        try {
+            if (action === "accept") {
+                await apiRequest(`/friends/accept/${id}`, { method: "POST" });
+            } else {
+                await apiRequest(`/friends/reject/${id}`, { method: "PATCH" });
+            }
+            received = received.filter((r) => r.id !== id);
+            renderTabs();
+            renderList();
+        } catch (err) {
+            window.alert(err instanceof Error ? err.message : "Erreur lors de la réponse à la demande.");
+        }
     }
 
-    function cancelRequest(id: string) {
-        sent = sent.filter((r) => r.id !== id);
-        console.log("Demande annulée :", id);
-        renderTabs();
-        renderList();
+    // Pas d'endpoint documenté pour annuler une demande envoyée — on le signale
+    // plutôt que de simuler un succès qui n'existe pas côté serveur.
+    function cancelRequest(_id: string) {
+        window.alert("Annuler une demande envoyée n'est pas encore possible : l'API ne fournit pas cette route.");
     }
 
     tabsEl.querySelectorAll<HTMLButtonElement>(".demandes-tab").forEach((tab) => {
@@ -127,8 +140,33 @@ export function initDemandes() {
         });
     });
 
+    onSocket("friend_request", (payload) => {
+        received.push(toDisplay(payload.sender_id, payload.sender_username));
+        renderTabs();
+        renderList();
+    });
+
+    onSocket("friend_request_edit", (payload) => {
+        sent = sent.filter((r) => r.id !== payload.sender_id || !(payload.is_accepted || payload.is_rejected));
+        renderTabs();
+        renderList();
+    });
+
     renderTabs();
     renderList();
+
+    apiRequest<{ sent: ApiFriendRequest[]; received: ApiFriendRequest[] }>("/friends/requests")
+        .then((data) => {
+            received = data.received
+                .filter((r) => !(r.isRejected ?? r.is_rejected))
+                .map((r) => toDisplay(r.sender_id, r.sender_username));
+            sent = data.sent.map((r) => toDisplay(r.receiver_id, r.receiver_username));
+            renderTabs();
+            renderList();
+        })
+        .catch((err) => {
+            listEl!.innerHTML = `<div class="demandes-empty-state">Impossible de charger les demandes : ${err instanceof Error ? err.message : "erreur inconnue"}</div>`;
+        });
 }
 
 initDemandes();

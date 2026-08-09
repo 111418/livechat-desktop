@@ -62,6 +62,11 @@ body > main {
     color: #fff;
 }
 
+.recipient-chip-offline {
+    @apply text-[8px] leading-none;
+    color: rgba(255, 255, 255, 0.6);
+}
+
 .add-recipient-chip {
     @apply flex items-center gap-1.5 rounded-full px-3 py-1.5 font-bold text-xs cursor-pointer border-none;
     background: transparent;
