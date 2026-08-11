@@ -27,6 +27,7 @@ struct LivechatPayload {
     duration: Option<f64>,
     author_discord_id: String,
     author_name: String,
+    author_avatar_hash: Option<String>,
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/

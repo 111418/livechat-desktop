@@ -51,12 +51,15 @@ html, body {
     @apply max-w-full max-h-full object-contain;
 }
 
-/* Pseudo de l'expéditeur, en badge coin haut-droit du média (pas de photo de
-   profil pour l'instant : elle n'est pas récupérée côté Discord). */
+/* Pseudo (+ photo si connue) de l'expéditeur, en badge coin haut-droit du média. */
 #overlay-author {
-    @apply absolute top-2.5 right-2.5 text-white font-bold text-xs px-2.5 py-1 rounded-full;
+    @apply absolute top-2.5 right-2.5 flex items-center gap-1.5 text-white font-bold text-xs pl-1 pr-2.5 py-1 rounded-full;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
+}
+
+#overlay-author img {
+    @apply w-5 h-5 rounded-full object-cover shrink-0;
 }
 
 #overlay-author[hidden] {

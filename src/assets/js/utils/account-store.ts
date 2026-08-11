@@ -3,11 +3,13 @@ const STORAGE_KEY = "livechat:account";
 export interface Account {
     username: string;
     discordId: string;
+    avatarUrl: string | null;
 }
 
 const DEFAULT_ACCOUNT: Account = {
     username: "",
     discordId: "",
+    avatarUrl: null,
 };
 
 export function getAccount(): Account {

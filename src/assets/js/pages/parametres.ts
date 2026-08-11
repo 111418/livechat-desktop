@@ -56,7 +56,7 @@ async function initAccount(): Promise<void> {
         const tag = account.discordId ? account.discordId.slice(-4) : "----";
         return `
             <div class="settings-card">
-                <div class="settings-avatar">${account.username ? initials(account.username) : ""}</div>
+                <div class="settings-avatar">${account.avatarUrl ? `<img src="${account.avatarUrl}" alt="" class="w-full h-full rounded-full object-cover">` : account.username ? initials(account.username) : ""}</div>
                 <div class="settings-name-col">
                     <span class="settings-name">${account.username}</span>
                     <span class="settings-subtext">Discord · #${tag}</span>

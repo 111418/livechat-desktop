@@ -11,6 +11,7 @@ interface Friend {
     initials: string;
     color: string;
     textColor?: string;
+    avatarUrl: string | null;
     online: boolean;
     muted: boolean;
     groupIds: string[];
@@ -114,12 +115,15 @@ export function initAccueil() {
     function renderFriendItem(friend: Friend): string {
         const selected = selectedIds.has(friend.id);
         const avatarStyle = `background:${friend.color}${friend.textColor ? `;color:${friend.textColor}` : ""}`;
+        const avatarInner = friend.avatarUrl
+            ? `<img src="${friend.avatarUrl}" alt="" class="w-full h-full rounded-full object-cover">`
+            : friend.initials;
 
         if (!friend.online) {
             return `
                 <div class="friend-item friend-item-offline" data-friend-id="${friend.id}">
                     <div class="friend-avatar" style="${avatarStyle}">
-                        ${friend.initials}
+                        ${avatarInner}
                         <span class="friend-status-dot friend-status-dot-off"></span>
                     </div>
                     <div class="friend-name-col">
@@ -137,7 +141,7 @@ export function initAccueil() {
         return `
             <div class="friend-item friend-item-online${selected ? "" : " is-deselected"}" data-friend-id="${friend.id}" data-selected="${selected}" data-muted="${friend.muted}">
                 <div class="friend-avatar" style="${avatarStyle}">
-                    ${friend.initials}
+                    ${avatarInner}
                     <span class="friend-status-dot"></span>
                 </div>
                 <div class="friend-name-col">
@@ -287,7 +291,7 @@ export function initAccueil() {
                     <div class="modal-friend-list">
                         ${FRIENDS.map((f) => `
                             <div class="modal-friend-row" data-friend-id="${f.id}">
-                                <span class="friend-avatar" style="width:30px;height:30px;font-size:11px;background:${f.color}${f.textColor ? `;color:${f.textColor}` : ""}">${f.initials}</span>
+                                <span class="friend-avatar" style="width:30px;height:30px;font-size:11px;background:${f.color}${f.textColor ? `;color:${f.textColor}` : ""}">${f.avatarUrl ? `<img src="${f.avatarUrl}" alt="" class="w-full h-full rounded-full object-cover">` : f.initials}</span>
                                 <span class="modal-friend-name">${f.name}</span>
                                 <input type="checkbox" class="modal-friend-checkbox">
                             </div>
@@ -435,6 +439,7 @@ export function initAccueil() {
                 initials: f.initials,
                 color: f.color,
                 textColor: f.textColor,
+                avatarUrl: f.avatarUrl,
                 online: onlineIds.has(f.discordId),
                 muted: isMuted(f.discordId),
                 groupIds: [],
@@ -507,6 +512,7 @@ export function initAccueil() {
                 initials: f.initials,
                 color: f.color,
                 textColor: f.textColor,
+                avatarUrl: f.avatarUrl,
             })),
             groupLabel: activeGroup?.label ?? null,
         });

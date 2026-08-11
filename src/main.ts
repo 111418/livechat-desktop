@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { initials } from "./assets/js/utils/avatar.ts";
+import { avatarUrl as buildAvatarUrl, initials } from "./assets/js/utils/avatar.ts";
 import { getAccount, setAccount, type Account } from "./assets/js/utils/account-store.ts";
 import { initAccueil } from "./assets/js/pages/accueil.ts";
 import { isMuted } from "./assets/js/utils/muted-friends-store.ts";
@@ -11,7 +11,11 @@ let greetMsgEl: HTMLElement | null;
 
 function paintAccount(account: Account): void {
     const userAvatar = document.querySelector("#user-avatar");
-    if (userAvatar) userAvatar.textContent = account.username ? initials(account.username) : "";
+    if (userAvatar) {
+        userAvatar.innerHTML = account.avatarUrl
+            ? `<img src="${account.avatarUrl}" alt="" class="w-full h-full rounded-full object-cover">`
+            : account.username ? initials(account.username) : "";
+    }
 
     const usernameDisplay = document.querySelector("#username-display");
     if (usernameDisplay) usernameDisplay.textContent = account.username;
@@ -23,7 +27,11 @@ function paintAccount(account: Account): void {
 async function refreshAccount(): Promise<void> {
     try {
         const me = await fetchMe();
-        const account: Account = { username: me.username ?? "", discordId: me.discord_id };
+        const account: Account = {
+            username: me.username ?? "",
+            discordId: me.discord_id,
+            avatarUrl: buildAvatarUrl(me.discord_id, me.avatar_hash),
+        };
         setAccount(account);
         paintAccount(account);
     } catch (err) {

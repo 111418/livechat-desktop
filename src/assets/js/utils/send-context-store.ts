@@ -6,6 +6,7 @@ export interface SendRecipient {
     initials: string;
     color: string;
     textColor?: string;
+    avatarUrl?: string | null;
 }
 
 export interface SendContext {

@@ -7,6 +7,7 @@ export interface LivechatPayload {
     transparent?: boolean;
     author_discord_id: string;
     author_name: string;
+    author_avatar_hash?: string | null;
     duration?: number;
 }
 

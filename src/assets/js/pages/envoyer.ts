@@ -56,12 +56,18 @@ function initEnvoyer() {
         if (dropdown) dropdown.hidden = true;
     });
 
+    function chipAvatar(r: SendRecipient): string {
+        return r.avatarUrl
+            ? `<img src="${r.avatarUrl}" alt="" class="w-full h-full rounded-full object-cover">`
+            : r.initials;
+    }
+
     function renderRecipients() {
         const chips = recipients.map((r) => {
             const isOffline = offlineIds.has(r.id);
             return `
             <span class="recipient-chip${isOffline ? " recipient-chip-offline" : ""}" data-recipient-id="${r.id}"${isOffline ? ` title="App fermée — l'envoi n'est pas garanti"` : ""}>
-                <span class="recipient-chip-avatar" style="background:${r.color}${r.textColor ? `;color:${r.textColor}` : ""}">${r.initials}</span>
+                <span class="recipient-chip-avatar" style="background:${r.color}${r.textColor ? `;color:${r.textColor}` : ""}">${chipAvatar(r)}</span>
                 ${isOffline ? `<span class="recipient-chip-offline-dot"></span>` : ""}
                 ${r.name}
                 <button type="button" class="recipient-chip-remove" data-remove-recipient="${r.id}" aria-label="Retirer ${r.name}">✕</button>
@@ -77,7 +83,7 @@ function initEnvoyer() {
                     <div class="add-recipient-dropdown" id="add-recipient-dropdown" hidden>
                         ${addableLeft.map((f) => `
                             <button type="button" class="add-recipient-option" data-add-friend-id="${f.id}">
-                                <span class="recipient-chip-avatar" style="background:${f.color}${f.textColor ? `;color:${f.textColor}` : ""}">${f.initials}</span>
+                                <span class="recipient-chip-avatar" style="background:${f.color}${f.textColor ? `;color:${f.textColor}` : ""}">${chipAvatar(f)}</span>
                                 ${f.name}
                             </button>
                         `).join("")}
@@ -304,6 +310,7 @@ function initEnvoyer() {
                 initials: f.initials,
                 color: f.color,
                 textColor: f.textColor,
+                avatarUrl: f.avatarUrl,
             }));
         } catch (err) {
             console.error("Impossible de charger les amis :", err);

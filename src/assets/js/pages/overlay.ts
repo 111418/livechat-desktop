@@ -3,6 +3,7 @@ import {invoke} from "@tauri-apps/api/core";
 import type {LivechatPayload} from "../services/socket.ts";
 import {getOverlaySettings} from "../utils/overlay-settings-store.ts";
 import {getServerUrl} from "../services/config.ts";
+import {avatarUrl} from "../utils/avatar.ts";
 
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv"];
 const DEFAULT_DURATION_SECONDS = 4;
@@ -54,7 +55,8 @@ async function showLivechat(payload: LivechatPayload) {
     root.classList.toggle("is-opaque", payload.transparent === false);
 
     if (authorEl) {
-        authorEl.textContent = payload.author_name;
+        const pic = avatarUrl(payload.author_discord_id, payload.author_avatar_hash);
+        authorEl.innerHTML = `${pic ? `<img src="${pic}" alt="">` : ""}<span>${payload.author_name}</span>`;
         authorEl.hidden = !payload.author_name;
     }
 
