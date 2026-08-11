@@ -1,0 +1,78 @@
+@reference "../tailwind.css";
+
+html, body {
+    @apply w-full h-full m-0 p-0 overflow-hidden;
+    background: transparent;
+}
+
+#overlay-root {
+    @apply w-screen h-screen flex flex-col gap-4;
+    padding: 4vh 4vw;
+    background: transparent;
+    /* Centre par défaut ; le data-position ci-dessous (réglé par le destinataire
+       dans ses propres paramètres, jamais par l'expéditeur) prend le dessus. */
+    justify-content: center;
+    align-items: center;
+}
+
+/* justify-content = axe vertical (flex-direction: column), align-items = horizontal. */
+#overlay-root[data-position="top-left"] { justify-content: flex-start; align-items: flex-start; }
+#overlay-root[data-position="top-center"] { justify-content: flex-start; align-items: center; }
+#overlay-root[data-position="top-right"] { justify-content: flex-start; align-items: flex-end; }
+#overlay-root[data-position="middle-left"] { justify-content: center; align-items: flex-start; }
+#overlay-root[data-position="center"] { justify-content: center; align-items: center; }
+#overlay-root[data-position="middle-right"] { justify-content: center; align-items: flex-end; }
+#overlay-root[data-position="bottom-left"] { justify-content: flex-end; align-items: flex-start; }
+#overlay-root[data-position="bottom-center"] { justify-content: flex-end; align-items: center; }
+#overlay-root[data-position="bottom-right"] { justify-content: flex-end; align-items: flex-end; }
+
+#overlay-media-wrap {
+    @apply relative max-w-full max-h-full flex items-center justify-center;
+}
+
+#overlay-media {
+    @apply max-w-full max-h-full flex items-center justify-center;
+}
+
+/* transparent === false côté payload : au lieu de prendre tout l'écran, le
+   média s'affiche dans un petit encart opaque façon notification, positionné
+   selon le réglage du destinataire — jamais un plein écran noir. */
+#overlay-root.is-opaque #overlay-media-wrap {
+    max-width: min(420px, 90vw);
+    max-height: min(320px, 90vh);
+    background-color: rgb(var(--color-dark));
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.7);
+}
+
+#overlay-media img,
+#overlay-media video {
+    @apply max-w-full max-h-full object-contain;
+}
+
+/* Pseudo de l'expéditeur, en badge coin haut-droit du média (pas de photo de
+   profil pour l'instant : elle n'est pas récupérée côté Discord). */
+#overlay-author {
+    @apply absolute top-2.5 right-2.5 text-white font-bold text-xs px-2.5 py-1 rounded-full;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+#overlay-author[hidden] {
+    display: none;
+}
+
+#overlay-message {
+    @apply text-white font-extrabold text-2xl text-center px-6;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+
+#overlay-message[hidden] {
+    display: none;
+}
+
+/* En bas d'écran, le message se lit mieux au-dessus du média que dessous. */
+#overlay-root[data-position^="bottom-"] #overlay-message {
+    order: -1;
+}

@@ -8,6 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Envoyer - Splatt</title>
     <script type="module" src="./assets/js/pages/envoyer.ts" defer></script>
+    <script type="module" src="./main.ts" defer></script>
 </head>
 <body>
 <livechat-titlebar></livechat-titlebar>
@@ -25,14 +26,7 @@
             </div>
 
             <div id="media-section">
-                <div id="media-tabs-row">
-                    <span class="send-label">Média</span>
-                    <div id="media-tabs">
-                        <button type="button" class="media-tab" data-media-tab="file">Fichier</button>
-                        <button type="button" class="media-tab" data-media-tab="url">URL</button>
-                        <button type="button" class="media-tab" data-media-tab="gif">GIFs</button>
-                    </div>
-                </div>
+                <span class="send-label">Média</span>
                 <div id="media-panel"></div>
             </div>
 
@@ -55,19 +49,6 @@
             </div>
 
             <div class="settings-slider-block">
-                <div class="settings-slider-head"><span>Volume</span><span class="settings-slider-value" id="send-volume-value">80%</span></div>
-                <input type="range" min="0" max="100" value="80" id="send-volume-slider" class="volume-slider">
-            </div>
-
-            <div class="settings-slider-block">
-                <span class="send-position-title">Position</span>
-                <div class="position-picker-row">
-                    <div class="position-grid" id="send-position-grid"></div>
-                    <span class="position-label-small" id="send-position-label"></span>
-                </div>
-            </div>
-
-            <div class="settings-slider-block">
                 <div class="transparent-toggle-row">
                     <span class="send-position-title">Plein écran chez la cible</span>
                     <button type="button" class="send-toggle" id="send-transparent-toggle">
@@ -75,6 +56,7 @@
                     </button>
                 </div>
                 <p class="transparent-hint" id="transparent-hint"></p>
+                <p class="transparent-hint">La position et le volume sont réglés par chaque destinataire dans ses propres paramètres.</p>
             </div>
 
             <button type="button" id="send-jumpscare-submit" class="send-submit-btn" disabled>⚡ Envoyer le jumpscare</button>

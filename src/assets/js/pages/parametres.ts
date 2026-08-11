@@ -1,6 +1,8 @@
 import {initials} from "../utils/avatar.ts";
-import {getAccount, setUsername} from "../utils/account-store.ts";
+import {getAccount, setUsername, clearAccount} from "../utils/account-store.ts";
 import {getOverlaySettings, setOverlaySettings, type PositionId} from "../utils/overlay-settings-store.ts";
+import {getServerUrl, setServerUrl, clearToken} from "../services/config.ts";
+import {apiRequest, ApiError} from "../services/api.ts";
 
 type Tab = "compte" | "overlay" | "serveur" | "securite";
 
@@ -23,15 +25,17 @@ const POSITION_LABELS: Record<PositionId, string> = {
 };
 
 const account = getAccount();
-
-const server = {
-    url: "wss://livechat.111418.gg/ws",
-    pingMs: 24,
-};
+let serverUrl = "";
 
 const overlaySettings = getOverlaySettings();
 
-function initAccount(): void {
+async function logout(): Promise<void> {
+    await clearToken();
+    clearAccount();
+    window.location.href = "./login.html";
+}
+
+async function initAccount(): Promise<void> {
     let activeTab: Tab = "overlay";
 
     const navEl = document.querySelector<HTMLElement>("#settings-nav");
@@ -40,6 +44,8 @@ function initAccount(): void {
 
     if (!navEl || !contentEl) return;
 
+    serverUrl = await getServerUrl();
+
     function renderNav() {
         navEl!.querySelectorAll<HTMLButtonElement>(".settings-nav-item[data-tab]").forEach((btn) => {
             btn.classList.toggle("is-active", btn.dataset.tab === activeTab);
@@ -47,12 +53,13 @@ function initAccount(): void {
     }
 
     function accountCard(): string {
+        const tag = account.discordId ? account.discordId.slice(-4) : "----";
         return `
             <div class="settings-card">
-                <div class="settings-avatar">${initials(account.username)}</div>
+                <div class="settings-avatar">${account.username ? initials(account.username) : ""}</div>
                 <div class="settings-name-col">
                     <span class="settings-name">${account.username}</span>
-                    <span class="settings-subtext">Discord · #${account.tag}</span>
+                    <span class="settings-subtext">Discord · #${tag}</span>
                 </div>
                 <button type="button" class="settings-btn settings-btn-danger" id="account-logout-btn">Déconnexion</button>
             </div>
@@ -65,9 +72,8 @@ function initAccount(): void {
                 <span class="settings-icon-badge">🛰</span>
                 <div class="settings-name-col">
                     <span class="settings-name" style="font-size:12.5px">Serveur</span>
-                    <span class="settings-subtext" style="font-family:ui-monospace,'SF Mono',Consolas,monospace">${server.url}</span>
+                    <span class="settings-subtext" style="font-family:ui-monospace,'SF Mono',Consolas,monospace">${serverUrl || "Non configuré"}</span>
                 </div>
-                <span class="settings-ping">${server.pingMs} ms</span>
                 <button type="button" class="settings-btn" id="server-change-btn">Changer</button>
             </div>
         `;
@@ -182,13 +188,20 @@ function initAccount(): void {
     function wireUsernameForm() {
         const input = contentEl!.querySelector<HTMLInputElement>("#username-input");
         const saveBtn = contentEl!.querySelector<HTMLButtonElement>("#username-save-btn");
-        saveBtn?.addEventListener("click", () => {
+        saveBtn?.addEventListener("click", async () => {
             const value = input?.value.trim();
             if (!value) return;
-            account.username = value;
-            setUsername(value);
-            console.log("Pseudo mis à jour :", value);
-            renderContent();
+
+            saveBtn.disabled = true;
+            try {
+                await apiRequest("/auth/username", {method: "PATCH", body: {username: value}});
+                account.username = value;
+                setUsername(value);
+                renderContent();
+            } catch (err) {
+                alert(err instanceof ApiError ? err.message : "Erreur lors de la mise à jour du pseudo.");
+                saveBtn.disabled = false;
+            }
         });
     }
 
@@ -200,16 +213,16 @@ function initAccount(): void {
                 <div class="settings-card-column">
                     <div class="settings-section-label" style="margin-bottom:10px">Nouvelle URL du serveur</div>
                     <div class="settings-inline-form" style="margin-top:0">
-                        <input type="text" id="server-url-input" class="settings-input" value="${server.url}" autocomplete="off">
+                        <input type="text" id="server-url-input" class="settings-input" value="${serverUrl}" autocomplete="off">
                         <button type="button" class="button button-primary" id="server-save-btn" style="padding:8px 16px;font-size:13px">Enregistrer</button>
                     </div>
                 </div>
             `;
-            zone.querySelector<HTMLButtonElement>("#server-save-btn")?.addEventListener("click", () => {
+            zone.querySelector<HTMLButtonElement>("#server-save-btn")?.addEventListener("click", async () => {
                 const value = zone.querySelector<HTMLInputElement>("#server-url-input")?.value.trim();
                 if (!value) return;
-                server.url = value;
-                console.log("Serveur mis à jour :", value);
+                await setServerUrl(value);
+                serverUrl = value;
                 renderContent();
             });
         });
@@ -217,13 +230,8 @@ function initAccount(): void {
 
     function wireLogout() {
         contentEl!.querySelectorAll<HTMLButtonElement>("#account-logout-btn").forEach((btn) => {
-            btn.addEventListener("click", logout);
+            btn.addEventListener("click", () => void logout());
         });
-    }
-
-    function logout() {
-        console.log("Déconnexion");
-        window.location.href = "./login.html";
     }
 
     function renderContent() {
@@ -248,10 +256,10 @@ function initAccount(): void {
         });
     });
 
-    logoutBtn?.addEventListener("click", logout);
+    logoutBtn?.addEventListener("click", () => void logout());
 
     renderNav();
     renderContent();
 }
 
-initAccount();
+void initAccount();

@@ -1,5 +1,8 @@
-import {initials} from "../utils/avatar.ts";
 import {setSendContext} from "../utils/send-context-store.ts";
+import {isMuted, setMuted} from "../utils/muted-friends-store.ts";
+import {fetchFriends} from "../services/friends.ts";
+import {apiRequest, ApiError} from "../services/api.ts";
+import {connectSocket, onSocket, requestFriendsOnline, type FriendPresencePayload, type FriendRemovedPayload} from "../services/socket.ts";
 
 interface Friend {
     id: string;
@@ -18,40 +21,17 @@ interface Group {
     label: string;
 }
 
-interface DiscordProfile {
-    discordId: string;
-    name: string;
-    handle: string;
-    tag: string;
-    color: string;
-    textColor?: string;
-}
-
 const ALL_GROUP_ID = "all";
 
-const GROUPS: Group[] = [
-    {id: "potes", label: "Les potes"},
-    {id: "stream", label: "Stream squad"},
-];
+// Les groupes n'existent pas côté API — fonctionnalité 100% locale, non persistée.
+const GROUPS: Group[] = [];
 
-const FRIENDS: Friend[] = [
-    {id: "nour", discordId: "102938475610283", name: "Nour", initials: "NR", color: "#5865F2", online: true, muted: false, groupIds: ["potes"]},
-    {id: "theo", discordId: "203847561029384", name: "Théo", initials: "TH", color: "#ED6A5E", online: true, muted: true, groupIds: ["potes"]},
-    {id: "maya", discordId: "304756102938475", name: "Maya", initials: "MA", color: "#F4BD50", textColor: "#3a2a00", online: true, muted: false, groupIds: ["potes", "stream"]},
-    {id: "sami", discordId: "405610293847561", name: "Sami", initials: "SA", color: "#3a3b40", online: false, muted: false, groupIds: []},
-    {id: "lea", discordId: "506102938475610", name: "Léa", initials: "LE", color: "#3a3b40", online: false, muted: false, groupIds: ["stream"]},
-];
-
-// Simule l'annuaire Discord interrogé par /auth/... côté API — à remplacer par un vrai appel réseau.
-const DISCORD_DIRECTORY: DiscordProfile[] = [
-    {discordId: "841273920475193", name: "Chloé", handle: "chloe", tag: "4417", color: "#F4BD50", textColor: "#3a2a00"},
-    {discordId: "552019938821004", name: "Malo", handle: "malo", tag: "9021", color: "#3BA55D"},
-];
+let FRIENDS: Friend[] = [];
 
 function slugify(name: string): string {
     const base = name
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[̀-ͯ]/g, "")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
@@ -198,7 +178,7 @@ export function initAccueil() {
             html += offline.map(renderFriendItem).join("");
         }
         if (!visible.length) {
-            const reason = query ? `« ${searchQuery} »` : "ce groupe";
+            const reason = query ? `« ${searchQuery} »` : FRIENDS.length ? "ce groupe" : "— ajoute un ami pour commencer";
             html = `<div class="friend-empty-state">Aucun ami ne correspond à ${reason}</div>`;
         }
         friendListEl!.innerHTML = html;
@@ -232,6 +212,7 @@ export function initAccueil() {
         const friend = FRIENDS.find((f) => f.id === friendId);
         if (!friend) return;
         friend.muted = !friend.muted;
+        setMuted(friend.discordId, friend.muted);
         renderFriendList();
     }
 
@@ -385,7 +366,6 @@ export function initAccueil() {
 
     function openAddFriendModal() {
         if (!modalRoot) return;
-        let foundProfile: DiscordProfile | null = null;
 
         modalRoot.innerHTML = `
             <div class="modal-overlay">
@@ -394,16 +374,13 @@ export function initAccueil() {
                         <span>Ajouter un ami</span>
                         <button type="button" class="modal-close" aria-label="Fermer">✕</button>
                     </div>
-                    <p class="modal-message" style="margin-bottom:16px">Entre l'ID Discord de la personne. On récupère son profil pour que tu confirmes.</p>
+                    <p class="modal-message" style="margin-bottom:16px">Entre l'ID Discord de la personne — la demande part directement, il n'y a pas d'aperçu de profil possible.</p>
                     <div class="modal-label">ID Discord</div>
-                    <div class="add-friend-search-row">
-                        <input type="text" id="discord-id-input" class="modal-input" placeholder="Ex. 841273920475193" autocomplete="off" inputmode="numeric">
-                        <button type="button" class="search-btn" id="search-friend-btn">Rechercher</button>
-                    </div>
-                    <div id="discord-search-result"></div>
+                    <input type="text" id="discord-id-input" class="modal-input" placeholder="Ex. 841273920475193" autocomplete="off" inputmode="numeric">
+                    <p class="modal-error" id="modal-error" hidden></p>
                     <div class="modal-footer">
                         <button type="button" class="button button-secondary" id="modal-cancel-btn">Annuler</button>
-                        <button type="button" class="button button-primary" id="modal-add-friend-btn" disabled>＋ Ajouter en ami</button>
+                        <button type="button" class="button button-primary" id="modal-send-request-btn">Envoyer la demande</button>
                     </div>
                 </div>
             </div>
@@ -411,9 +388,8 @@ export function initAccueil() {
 
         const overlay = modalRoot.querySelector<HTMLElement>(".modal-overlay");
         const idInput = modalRoot.querySelector<HTMLInputElement>("#discord-id-input");
-        const searchBtn = modalRoot.querySelector<HTMLButtonElement>("#search-friend-btn");
-        const resultEl = modalRoot.querySelector<HTMLElement>("#discord-search-result");
-        const addBtn = modalRoot.querySelector<HTMLButtonElement>("#modal-add-friend-btn");
+        const sendRequestBtn = modalRoot.querySelector<HTMLButtonElement>("#modal-send-request-btn");
+        const errorEl = modalRoot.querySelector<HTMLElement>("#modal-error");
 
         overlay?.addEventListener("click", (e) => {
             if (e.target === overlay) closeModal();
@@ -421,75 +397,98 @@ export function initAccueil() {
         modalRoot.querySelector(".modal-close")?.addEventListener("click", closeModal);
         modalRoot.querySelector("#modal-cancel-btn")?.addEventListener("click", closeModal);
 
-        function resetResult() {
-            foundProfile = null;
-            if (addBtn) addBtn.disabled = true;
-            if (resultEl) resultEl.innerHTML = "";
-        }
-
-        idInput?.addEventListener("input", resetResult);
-
-        function runSearch() {
+        sendRequestBtn?.addEventListener("click", async () => {
             const discordId = idInput?.value.trim();
-            if (!discordId || !resultEl) return;
+            if (!discordId) return;
 
-            const alreadyFriend = FRIENDS.find((f) => f.discordId === discordId);
-            if (alreadyFriend) {
-                foundProfile = null;
-                if (addBtn) addBtn.disabled = true;
-                resultEl.innerHTML = `<p class="modal-error" style="margin-top:0">Vous êtes déjà amis avec ${alreadyFriend.name}.</p>`;
-                return;
+            sendRequestBtn.disabled = true;
+            if (errorEl) errorEl.hidden = true;
+
+            try {
+                await apiRequest(`/friends/send-to/${discordId}`, {method: "POST"});
+                closeModal();
+            } catch (err) {
+                if (errorEl) {
+                    errorEl.hidden = false;
+                    errorEl.textContent = err instanceof ApiError ? err.message : "Erreur inattendue.";
+                }
+            } finally {
+                sendRequestBtn.disabled = false;
             }
-
-            const profile = DISCORD_DIRECTORY.find((p) => p.discordId === discordId);
-            if (!profile) {
-                foundProfile = null;
-                if (addBtn) addBtn.disabled = true;
-                resultEl.innerHTML = `<p class="modal-error" style="margin-top:0">Aucun utilisateur trouvé avec cet ID.</p>`;
-                return;
-            }
-
-            foundProfile = profile;
-            if (addBtn) addBtn.disabled = false;
-            const avatarStyle = `background:${profile.color}${profile.textColor ? `;color:${profile.textColor}` : ""}`;
-            resultEl.innerHTML = `
-                <div class="discord-result-card">
-                    <div class="friend-avatar" style="width:46px;height:46px;font-size:15px;${avatarStyle}">${initials(profile.name)}</div>
-                    <div class="request-name-col">
-                        <span class="request-name" style="font-size:15px">${profile.name}</span>
-                        <span class="request-handle">@${profile.handle} · #${profile.tag}</span>
-                    </div>
-                    <span class="discord-found-badge">Trouvé</span>
-                </div>
-            `;
-        }
-
-        searchBtn?.addEventListener("click", runSearch);
-        idInput?.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") runSearch();
-        });
-
-        addBtn?.addEventListener("click", () => {
-            if (!foundProfile) return;
-            const id = slugify(foundProfile.name) + "-" + foundProfile.discordId.slice(-4);
-            FRIENDS.push({
-                id,
-                discordId: foundProfile.discordId,
-                name: foundProfile.name,
-                initials: initials(foundProfile.name),
-                color: foundProfile.color,
-                textColor: foundProfile.textColor,
-                online: false,
-                muted: false,
-                groupIds: [],
-            });
-            closeModal();
-            renderGroupPills();
-            renderFriendList();
         });
 
         idInput?.focus();
     }
+
+    // Les events de présence peuvent arriver avant que loadFriends() (réseau)
+    // n'ait fini : on les garde ici, indépendamment de FRIENDS, et on les
+    // réapplique à chaque (re)chargement de la liste.
+    const onlineIds = new Set<string>();
+
+    async function loadFriends() {
+        try {
+            const remote = await fetchFriends();
+            FRIENDS = remote.map((f) => ({
+                id: f.discordId,
+                discordId: f.discordId,
+                name: f.name,
+                initials: f.initials,
+                color: f.color,
+                textColor: f.textColor,
+                online: onlineIds.has(f.discordId),
+                muted: isMuted(f.discordId),
+                groupIds: [],
+            }));
+        } catch (err) {
+            console.error("Impossible de charger les amis :", err);
+        }
+        renderGroupPills();
+        renderFriendList();
+        updateSelectionBar();
+        // Redemande un snapshot frais maintenant que la liste est là : ne dépend
+        // plus du timing exact du snapshot auto-envoyé à la connexion du socket.
+        requestFriendsOnline();
+    }
+
+    // connectSocket() est ré-entrant : peu importe si main.ts l'a déjà appelé.
+    void connectSocket().then(() => {
+        onSocket("friends_online", (ids: string[]) => {
+            ids.forEach((id) => onlineIds.add(id));
+            let changed = false;
+            FRIENDS.forEach((f) => {
+                if (onlineIds.has(f.discordId) && !f.online) {
+                    f.online = true;
+                    changed = true;
+                }
+            });
+            if (changed) renderFriendList();
+        });
+
+        onSocket("friend_online", (payload: FriendPresencePayload) => {
+            onlineIds.add(payload.user_id);
+            const friend = FRIENDS.find((f) => f.discordId === payload.user_id);
+            if (friend) {
+                friend.online = true;
+                renderFriendList();
+            }
+        });
+
+        onSocket("friend_offline", (payload: FriendPresencePayload) => {
+            onlineIds.delete(payload.user_id);
+            const friend = FRIENDS.find((f) => f.discordId === payload.user_id);
+            if (friend) {
+                friend.online = false;
+                renderFriendList();
+            }
+        });
+
+        onSocket("friend_removed", (payload: FriendRemovedPayload) => {
+            FRIENDS = FRIENDS.filter((f) => f.discordId !== payload.user_id);
+            renderGroupPills();
+            renderFriendList();
+            updateSelectionBar();
+        });
+    }).catch((err) => console.error("Connexion socket impossible :", err));
 
     searchInput?.addEventListener("input", () => {
         searchQuery = searchInput.value;
@@ -521,4 +520,5 @@ export function initAccueil() {
     renderGroupPills();
     renderFriendList();
     updateSelectionBar();
+    void loadFriends();
 }

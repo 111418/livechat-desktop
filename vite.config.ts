@@ -15,6 +15,7 @@ export default defineConfig(() => ({
     rollupOptions: {
       input: {
         index: resolve(__dirname, "src/index.html"),
+        login: resolve(__dirname, "src/login.html"),
         overlay: resolve(__dirname, "src/overlay.html"),
         demandes: resolve(__dirname, "src/demandes.html"),
         parametres: resolve(__dirname, "src/parametres.html"),

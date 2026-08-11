@@ -58,4 +58,12 @@ main {
     p {
         color: rgb(var(--color-gray));
     }
+
+    #login-status {
+        @apply text-sm font-medium;
+    }
+
+    #login-status.is-error {
+        color: rgb(var(--color-red));
+    }
 }

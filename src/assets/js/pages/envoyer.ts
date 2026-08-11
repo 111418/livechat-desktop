@@ -1,43 +1,12 @@
 import {getSendContext, clearSendContext, type SendRecipient} from "../utils/send-context-store.ts";
-import {getOverlaySettings, type PositionId} from "../utils/overlay-settings-store.ts";
-
-type MediaTab = "file" | "url" | "gif";
+import {getOverlaySettings} from "../utils/overlay-settings-store.ts";
+import {fetchFriends} from "../services/friends.ts";
+import {apiRequest, ApiError} from "../services/api.ts";
+import {connectSocket, onSocket, type FriendPresencePayload} from "../services/socket.ts";
 
 type MediaState =
     | {type: "none"}
-    | {type: "file"; name: string; sizeLabel: string; previewUrl: string; kind: "image" | "video"}
-    | {type: "url"; url: string}
-    | {type: "gif"; label: string; emoji: string; color: string};
-
-const POSITION_GRID: PositionId[] = [
-    "top-left", "top-center", "top-right",
-    "middle-left", "center", "middle-right",
-    "bottom-left", "bottom-center", "bottom-right",
-];
-
-const POSITION_LABELS: Record<PositionId, string> = {
-    "top-left": "Haut Gauche", "top-center": "Haut Centre", "top-right": "Haut Droite",
-    "middle-left": "Milieu Gauche", "center": "Centre", "middle-right": "Milieu Droite",
-    "bottom-left": "Bas Gauche", "bottom-center": "Bas Centre", "bottom-right": "Bas Droite",
-};
-
-// Amis pouvant être ajoutés comme destinataire supplémentaire — à remplacer par GET /friends.
-const ADDABLE_FRIENDS: SendRecipient[] = [
-    {id: "nour", name: "Nour", initials: "NR", color: "#5865F2"},
-    {id: "theo", name: "Théo", initials: "TH", color: "#ED6A5E"},
-    {id: "maya", name: "Maya", initials: "MA", color: "#F4BD50", textColor: "#3a2a00"},
-    {id: "sami", name: "Sami", initials: "SA", color: "#3a3b40"},
-    {id: "lea", name: "Léa", initials: "LE", color: "#3a3b40"},
-];
-
-const MOCK_GIFS = [
-    {emoji: "👻", label: "boo.gif", color: "#5865F2"},
-    {emoji: "😱", label: "scream.gif", color: "#ED6A5E"},
-    {emoji: "🤡", label: "clown.gif", color: "#F4BD50"},
-    {emoji: "💀", label: "skull.gif", color: "#3a3b40"},
-    {emoji: "🐸", label: "kermit.gif", color: "#3BA55D"},
-    {emoji: "🕷️", label: "spider.gif", color: "#6441A5"},
-];
+    | {type: "file"; file: File; name: string; sizeLabel: string; previewUrl: string; kind: "image" | "video"};
 
 function formatSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} o`;
@@ -52,22 +21,20 @@ function initEnvoyer() {
 
     let recipients: SendRecipient[] = context?.recipients ? [...context.recipients] : [];
     const groupLabel = context?.groupLabel ?? null;
+    let addableFriends: SendRecipient[] = [];
 
-    let activeMediaTab: MediaTab = "file";
+    // Pas de snapshot de présence côté API : on ne signale hors-ligne que les
+    // amis vus explicitement déconnectés pendant cette session (pas de faux positifs).
+    const offlineIds = new Set<string>();
+
     let media: MediaState = {type: "none"};
-    let position: PositionId = overlay.position;
     let transparent = overlay.transparent;
     let useFullVideo = false;
 
     const chipsEl = document.querySelector<HTMLElement>("#recipients-chips");
-    const mediaTabsEl = document.querySelector<HTMLElement>("#media-tabs");
     const mediaPanelEl = document.querySelector<HTMLElement>("#media-panel");
-    const positionGridEl = document.querySelector<HTMLElement>("#send-position-grid");
-    const positionLabelEl = document.querySelector<HTMLElement>("#send-position-label");
     const durationSlider = document.querySelector<HTMLInputElement>("#duration-slider");
     const durationValueEl = document.querySelector<HTMLElement>("#duration-value");
-    const volumeSlider = document.querySelector<HTMLInputElement>("#send-volume-slider");
-    const volumeValueEl = document.querySelector<HTMLElement>("#send-volume-value");
     const transparentToggle = document.querySelector<HTMLButtonElement>("#send-transparent-toggle");
     const transparentHintEl = document.querySelector<HTMLElement>("#transparent-hint");
     const fullVideoRow = document.querySelector<HTMLElement>("#full-video-row");
@@ -90,15 +57,19 @@ function initEnvoyer() {
     });
 
     function renderRecipients() {
-        const chips = recipients.map((r) => `
-            <span class="recipient-chip" data-recipient-id="${r.id}">
+        const chips = recipients.map((r) => {
+            const isOffline = offlineIds.has(r.id);
+            return `
+            <span class="recipient-chip${isOffline ? " recipient-chip-offline" : ""}" data-recipient-id="${r.id}"${isOffline ? ` title="App fermée — l'envoi n'est pas garanti"` : ""}>
                 <span class="recipient-chip-avatar" style="background:${r.color}${r.textColor ? `;color:${r.textColor}` : ""}">${r.initials}</span>
+                ${isOffline ? `<span class="recipient-chip-offline-dot"></span>` : ""}
                 ${r.name}
                 <button type="button" class="recipient-chip-remove" data-remove-recipient="${r.id}" aria-label="Retirer ${r.name}">✕</button>
             </span>
-        `).join("");
+        `;
+        }).join("");
 
-        const addableLeft = ADDABLE_FRIENDS.filter((f) => !recipients.some((r) => r.id === f.id));
+        const addableLeft = addableFriends.filter((f) => !recipients.some((r) => r.id === f.id));
         const addChip = addableLeft.length
             ? `
                 <span class="add-recipient-wrap">
@@ -142,7 +113,7 @@ function initEnvoyer() {
 
         dropdown?.querySelectorAll<HTMLButtonElement>("[data-add-friend-id]").forEach((option) => {
             option.addEventListener("click", () => {
-                const friend = ADDABLE_FRIENDS.find((f) => f.id === option.dataset.addFriendId);
+                const friend = addableFriends.find((f) => f.id === option.dataset.addFriendId);
                 if (!friend) return;
                 recipients.push(friend);
                 renderRecipients();
@@ -173,96 +144,29 @@ function initEnvoyer() {
     });
 
     function renderMediaPanel() {
-        mediaTabsEl?.querySelectorAll<HTMLButtonElement>(".media-tab").forEach((tab) => {
-            tab.classList.toggle("is-active", tab.dataset.mediaTab === activeMediaTab);
-        });
-
-        if (activeMediaTab === "file") {
-            if (media.type === "file") {
-                mediaPanelEl!.innerHTML = `
-                    <div class="media-dropzone" style="cursor:default">
-                        <span class="media-type-badge">${media.kind === "video" ? "VIDÉO" : "IMAGE"}</span>
-                        ${media.kind === "video"
-                            ? `<video class="media-preview-video" src="${media.previewUrl}" muted autoplay loop></video>`
-                            : `<img class="media-preview-img" src="${media.previewUrl}" alt="">`}
-                    </div>
-                    <div class="media-info-bar">
-                        <span class="media-info-name">${media.name}</span>
-                        <span class="media-info-meta">${media.sizeLabel}</span>
-                        <button type="button" class="media-remove-btn" id="media-remove-btn">Retirer</button>
-                    </div>
-                `;
-            } else {
-                mediaPanelEl!.innerHTML = `
-                    <div class="media-dropzone" id="file-dropzone">
-                        <div class="media-dropzone-icon">▶</div>
-                        <span class="media-dropzone-label">Aperçu du média</span>
-                        <span class="media-dropzone-hint">Clique pour choisir une image ou une vidéo</span>
-                    </div>
-                `;
-                mediaPanelEl!.querySelector("#file-dropzone")?.addEventListener("click", () => fileInput.click());
-            }
-        } else if (activeMediaTab === "url") {
-            if (media.type === "url") {
-                mediaPanelEl!.innerHTML = `
-                    <div class="media-dropzone" style="cursor:default">
-                        <img class="media-preview-img" src="${media.url}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Impossible de charger cette URL',className:'media-dropzone-hint'}))">
-                    </div>
-                    <div class="media-info-bar">
-                        <span class="media-info-name" style="font-family:ui-monospace,'SF Mono',Consolas,monospace;font-size:11.5px">${media.url}</span>
-                        <button type="button" class="media-remove-btn" id="media-remove-btn">Retirer</button>
-                    </div>
-                `;
-            } else {
-                mediaPanelEl!.innerHTML = `
-                    <div class="media-url-form">
-                        <input type="text" id="media-url-input" placeholder="https://exemple.com/media.gif" autocomplete="off">
-                        <button type="button" class="button button-primary" id="media-url-load-btn" style="padding:9px 18px;font-size:13px">Charger l'aperçu</button>
-                    </div>
-                `;
-                mediaPanelEl!.querySelector("#media-url-load-btn")?.addEventListener("click", () => {
-                    const url = mediaPanelEl!.querySelector<HTMLInputElement>("#media-url-input")?.value.trim();
-                    if (!url) return;
-                    media = {type: "url", url};
-                    renderMediaPanel();
-                    refreshSubmitState();
-                });
-            }
+        if (media.type === "file") {
+            mediaPanelEl!.innerHTML = `
+                <div class="media-dropzone" style="cursor:default">
+                    <span class="media-type-badge">${media.kind === "video" ? "VIDÉO" : "IMAGE"}</span>
+                    ${media.kind === "video"
+                        ? `<video class="media-preview-video" src="${media.previewUrl}" muted autoplay loop></video>`
+                        : `<img class="media-preview-img" src="${media.previewUrl}" alt="">`}
+                </div>
+                <div class="media-info-bar">
+                    <span class="media-info-name">${media.name}</span>
+                    <span class="media-info-meta">${media.sizeLabel}</span>
+                    <button type="button" class="media-remove-btn" id="media-remove-btn">Retirer</button>
+                </div>
+            `;
         } else {
-            if (media.type === "gif") {
-                mediaPanelEl!.innerHTML = `
-                    <div class="media-dropzone" style="cursor:default;background:${media.color}">
-                        <span style="font-size:54px">${media.emoji}</span>
-                    </div>
-                    <div class="media-info-bar">
-                        <span class="media-info-name">${media.label}</span>
-                        <button type="button" class="media-remove-btn" id="media-remove-btn">Retirer</button>
-                    </div>
-                `;
-            } else {
-                mediaPanelEl!.innerHTML = `
-                    <div class="gif-grid">
-                        ${MOCK_GIFS.map((g) => `
-                            <button type="button" class="gif-tile" style="background:${g.color}" data-gif-label="${g.label}" data-gif-emoji="${g.emoji}" data-gif-color="${g.color}">
-                                ${g.emoji}
-                                <span class="gif-tile-label">${g.label}</span>
-                            </button>
-                        `).join("")}
-                    </div>
-                `;
-                mediaPanelEl!.querySelectorAll<HTMLButtonElement>(".gif-tile").forEach((tile) => {
-                    tile.addEventListener("click", () => {
-                        media = {
-                            type: "gif",
-                            label: tile.dataset.gifLabel!,
-                            emoji: tile.dataset.gifEmoji!,
-                            color: tile.dataset.gifColor!,
-                        };
-                        renderMediaPanel();
-                        refreshSubmitState();
-                    });
-                });
-            }
+            mediaPanelEl!.innerHTML = `
+                <div class="media-dropzone" id="file-dropzone">
+                    <div class="media-dropzone-icon">▶</div>
+                    <span class="media-dropzone-label">Aperçu du média</span>
+                    <span class="media-dropzone-hint">Clique pour choisir une image ou une vidéo</span>
+                </div>
+            `;
+            mediaPanelEl!.querySelector("#file-dropzone")?.addEventListener("click", () => fileInput.click());
         }
 
         mediaPanelEl!.querySelector("#media-remove-btn")?.addEventListener("click", () => {
@@ -279,63 +183,48 @@ function initEnvoyer() {
         const file = fileInput.files?.[0];
         if (!file) return;
         revokePreview();
+        const kind = file.type.startsWith("video/") ? "video" : "image";
         media = {
             type: "file",
+            file,
             name: file.name,
             sizeLabel: formatSize(file.size),
             previewUrl: URL.createObjectURL(file),
-            kind: file.type.startsWith("video/") ? "video" : "image",
+            kind,
         };
         fileInput.value = "";
         renderMediaPanel();
         refreshSubmitState();
+
+        if (kind === "video" && durationSlider) {
+            const probeUrl = media.previewUrl;
+            const probe = document.createElement("video");
+            probe.preload = "metadata";
+            probe.src = probeUrl;
+            probe.addEventListener("loadedmetadata", () => {
+                // Le fichier a pu changer pendant le chargement des métadonnées.
+                if (media.type !== "file" || media.previewUrl !== probeUrl) return;
+                const tenths = Math.min(100, Math.max(5, Math.round(probe.duration * 10)));
+                applyDurationSlider(tenths);
+            }, {once: true});
+        }
     });
-
-    mediaTabsEl?.querySelectorAll<HTMLButtonElement>(".media-tab").forEach((tab) => {
-        tab.addEventListener("click", () => {
-            activeMediaTab = tab.dataset.mediaTab as MediaTab;
-            renderMediaPanel();
-        });
-    });
-
-    function renderPositionGrid() {
-        if (!positionGridEl) return;
-        positionGridEl.innerHTML = POSITION_GRID.map((pos) => `<button type="button" class="position-cell${pos === position ? " is-active" : ""}" data-position="${pos}" aria-label="${pos}"></button>`).join("");
-        if (positionLabelEl) positionLabelEl.textContent = POSITION_LABELS[position];
-
-        positionGridEl.querySelectorAll<HTMLButtonElement>(".position-cell").forEach((cell) => {
-            cell.addEventListener("click", () => {
-                position = cell.dataset.position as PositionId;
-                positionGridEl.querySelectorAll(".position-cell").forEach((c) => c.classList.remove("is-active"));
-                cell.classList.add("is-active");
-                if (positionLabelEl) positionLabelEl.textContent = POSITION_LABELS[position];
-            });
-        });
-    }
 
     function paintSlider(slider: HTMLInputElement, value: number, max: number) {
         const pct = (value / max) * 100;
         slider.style.background = `linear-gradient(to right, rgb(var(--color-primary)) ${pct}%, rgba(255,255,255,.1) ${pct}%)`;
     }
 
-    if (durationSlider) {
-        paintSlider(durationSlider, Number(durationSlider.value), 100);
-        durationSlider.addEventListener("input", () => {
-            const tenths = Number(durationSlider.value);
-            paintSlider(durationSlider, tenths, 100);
-            if (durationValueEl) durationValueEl.textContent = `${(tenths / 10).toFixed(1).replace(".", ",")} s`;
-        });
+    function applyDurationSlider(tenths: number) {
+        if (!durationSlider) return;
+        durationSlider.value = String(tenths);
+        paintSlider(durationSlider, tenths, 100);
+        if (durationValueEl) durationValueEl.textContent = `${(tenths / 10).toFixed(1).replace(".", ",")} s`;
     }
 
-    if (volumeSlider) {
-        volumeSlider.value = String(overlay.volume);
-        paintSlider(volumeSlider, overlay.volume, 100);
-        if (volumeValueEl) volumeValueEl.textContent = `${overlay.volume}%`;
-        volumeSlider.addEventListener("input", () => {
-            const value = Number(volumeSlider.value);
-            paintSlider(volumeSlider, value, 100);
-            if (volumeValueEl) volumeValueEl.textContent = `${value}%`;
-        });
+    if (durationSlider) {
+        applyDurationSlider(Number(durationSlider.value));
+        durationSlider.addEventListener("input", () => applyDurationSlider(Number(durationSlider!.value)));
     }
 
     function renderTransparentToggle() {
@@ -364,36 +253,81 @@ function initEnvoyer() {
         }
     }
 
-    submitBtn?.addEventListener("click", () => {
-        if (submitBtn.disabled) return;
+    submitBtn?.addEventListener("click", async () => {
+        if (submitBtn.disabled || media.type !== "file") return;
 
-        const payload = {
-            recipients: recipients.map((r) => r.id),
-            media,
-            message: messageInput?.value.trim() || null,
-            duration: useFullVideo ? null : Number(durationSlider?.value ?? 40) / 10,
-            useFullVideo,
-            volume: Number(volumeSlider?.value ?? overlay.volume),
-            position,
-            transparent,
-        };
-        console.log("Envoi du jumpscare :", payload);
+        const form = new FormData();
+        form.append("file", media.file, media.name);
+
+        const message = messageInput?.value.trim();
+        if (message) form.append("message", message);
+        form.append("transparent", String(transparent));
+        if (!useFullVideo) {
+            const duration = Number(durationSlider?.value ?? 40) / 10;
+            form.append("duration", String(duration));
+        }
+
+        const ids = recipients.map((r) => r.id).join(",");
 
         submitBtn.disabled = true;
-        submitBtn.classList.add("is-sent");
-        submitBtn.textContent = "✓ Envoyé";
-        clearSendContext();
+        try {
+            await apiRequest(`/send-to/${ids}`, {method: "POST", formData: form});
 
-        window.setTimeout(() => {
-            window.location.href = "./index.html";
-        }, 900);
+            submitBtn.classList.add("is-sent");
+            submitBtn.textContent = "✓ Envoyé";
+            // Le serveur ne dit jamais si c'est vraiment arrivé (app fermée,
+            // ami qui t'a mute côté lui...) — ni nous, donc on ne prétend pas
+            // le contraire plutôt que d'inventer un statut "muté" qu'on ne
+            // peut pas connaître (et que la plupart des apps cachent exprès).
+            if (footerTextEl) footerTextEl.textContent = "Livraison non garantie — le destinataire doit avoir l'app ouverte.";
+            clearSendContext();
+
+            window.setTimeout(() => {
+                window.location.href = "./index.html";
+            }, 900);
+        } catch (err) {
+            submitBtn.disabled = false;
+            if (err instanceof ApiError && err.status === 403) {
+                alert("Tu ne peux envoyer un jumpscare qu'à des amis.");
+            } else {
+                alert(err instanceof ApiError ? err.message : "Erreur lors de l'envoi du jumpscare.");
+            }
+        }
     });
+
+    async function loadAddableFriends() {
+        try {
+            const remote = await fetchFriends();
+            addableFriends = remote.map((f) => ({
+                id: f.discordId,
+                name: f.name,
+                initials: f.initials,
+                color: f.color,
+                textColor: f.textColor,
+            }));
+        } catch (err) {
+            console.error("Impossible de charger les amis :", err);
+        }
+        renderRecipients();
+    }
+
+    // connectSocket() est ré-entrant : peu importe si main.ts l'a déjà appelé.
+    void connectSocket().then(() => {
+        onSocket("friend_online", (payload: FriendPresencePayload) => {
+            offlineIds.delete(payload.user_id);
+            renderRecipients();
+        });
+        onSocket("friend_offline", (payload: FriendPresencePayload) => {
+            offlineIds.add(payload.user_id);
+            renderRecipients();
+        });
+    }).catch((err) => console.error("Connexion socket impossible :", err));
 
     renderRecipients();
     renderMediaPanel();
-    renderPositionGrid();
     renderTransparentToggle();
     refreshSubmitState();
+    void loadAddableFriends();
 }
 
 initEnvoyer();

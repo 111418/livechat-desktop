@@ -18,12 +18,26 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-store = "2"
+tauri-plugin-deep-link = "2"
+tauri-plugin-global-shortcut = "2"
 
+# Le scheme splatt:// est géré nativement sur macOS (LaunchServices) mais sur
+# Windows/Linux, cliquer un lien splatt:// relance un DEUXIEME process : ce
+# plugin détecte l'instance déjà ouverte et lui transmet les arguments au lieu
+# de laisser une seconde fenêtre s'ouvrir. Inutile/non supporté sur mobile.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"
+
+# Sur Windows, meme sans set_focus(), afficher une fenetre peut l'activer et
+# lui voler le focus clavier/souris (grave si l'app active est un jeu plein
+# ecran) : WS_EX_NOACTIVATE l'en empeche durablement, au niveau du systeme.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = ["Win32_UI_WindowsAndMessaging"] }
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

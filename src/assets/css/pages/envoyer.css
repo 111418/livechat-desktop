@@ -62,6 +62,16 @@ body > main {
     color: #fff;
 }
 
+/* Pas de garantie de livraison côté serveur : simple avertissement visuel. */
+.recipient-chip-offline {
+    opacity: 0.55;
+}
+
+.recipient-chip-offline-dot {
+    @apply w-1.5 h-1.5 rounded-full shrink-0;
+    background-color: rgb(var(--color-red));
+}
+
 .add-recipient-chip {
     @apply flex items-center gap-1.5 rounded-full px-3 py-1.5 font-bold text-xs cursor-pointer border-none;
     background: transparent;
