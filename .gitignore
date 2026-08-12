@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Le projet tourne avec bun (bun.lock) — ces lockfiles d'autres gestionnaires
+# ont fait planter tauri-action (mauvaise auto-detection du package manager).
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
