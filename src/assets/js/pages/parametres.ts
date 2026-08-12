@@ -3,6 +3,7 @@ import {getAccount, setUsername, clearAccount} from "../utils/account-store.ts";
 import {getOverlaySettings, setOverlaySettings, type PositionId} from "../utils/overlay-settings-store.ts";
 import {getServerUrl, setServerUrl, clearToken} from "../services/config.ts";
 import {apiRequest, ApiError} from "../services/api.ts";
+import {getUpdateSettings, setUpdateSettings} from "../utils/update-settings-store.ts";
 
 type Tab = "compte" | "overlay" | "serveur" | "securite";
 
@@ -28,6 +29,7 @@ const account = getAccount();
 let serverUrl = "";
 
 const overlaySettings = getOverlaySettings();
+const updateSettings = getUpdateSettings();
 
 async function logout(): Promise<void> {
     await clearToken();
@@ -138,6 +140,15 @@ async function initAccount(): Promise<void> {
             <div class="settings-callout">
                 <b>Jeton de session non révocable.</b> Le jeton émis à la connexion Discord n'expire jamais et ne peut pas être invalidé à distance — se déconnecter ici efface uniquement la session locale. En cas de doute, révoque plutôt l'autorisation depuis les paramètres Discord de ton compte.
             </div>
+            <div class="settings-card" style="margin-top:12px">
+                <div class="settings-name-col">
+                    <span class="settings-name" style="font-size:13.5px">Mise à jour automatique</span>
+                    <span class="settings-subtext" style="font-weight:500;max-width:330px">Installe les nouvelles versions sans demander (sinon, une confirmation te sera proposée à chaque nouvelle version).</span>
+                </div>
+                <button type="button" class="settings-toggle${updateSettings.autoUpdate ? " is-on" : ""}" id="auto-update-toggle" aria-pressed="${updateSettings.autoUpdate}">
+                    <span class="settings-toggle-knob"></span>
+                </button>
+            </div>
         `;
     }
 
@@ -182,6 +193,16 @@ async function initAccount(): Promise<void> {
             toggle.classList.toggle("is-on", overlaySettings.transparent);
             toggle.setAttribute("aria-pressed", String(overlaySettings.transparent));
             setOverlaySettings(overlaySettings);
+        });
+    }
+
+    function wireAutoUpdateToggle() {
+        const toggle = contentEl!.querySelector<HTMLButtonElement>("#auto-update-toggle");
+        toggle?.addEventListener("click", () => {
+            updateSettings.autoUpdate = !updateSettings.autoUpdate;
+            toggle.classList.toggle("is-on", updateSettings.autoUpdate);
+            toggle.setAttribute("aria-pressed", String(updateSettings.autoUpdate));
+            setUpdateSettings(updateSettings);
         });
     }
 
@@ -243,6 +264,7 @@ async function initAccount(): Promise<void> {
         wireVolumeSlider();
         wirePositionGrid();
         wireTransparentToggle();
+        wireAutoUpdateToggle();
         wireUsernameForm();
         wireServerChange();
         wireLogout();

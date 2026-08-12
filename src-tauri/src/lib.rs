@@ -76,6 +76,14 @@ pub fn run() {
         }
     }));
 
+    // Verifie les nouvelles versions via le manifeste publie sur GitHub Releases
+    // (voir tauri.conf.json plugins.updater) ; process:: fournit relaunch()
+    // pour redemarrer l'app une fois la mise a jour installee.
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
+
     builder
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())

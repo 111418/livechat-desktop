@@ -5,6 +5,7 @@ import { initAccueil } from "./assets/js/pages/accueil.ts";
 import { isMuted } from "./assets/js/utils/muted-friends-store.ts";
 import { fetchMe } from "./assets/js/services/me.ts";
 import { connectSocket, onSocket, type LivechatPayload } from "./assets/js/services/socket.ts";
+import { checkForUpdate } from "./assets/js/services/updater.ts";
 
 let greetInputEl: HTMLInputElement | null;
 let greetMsgEl: HTMLElement | null;
@@ -73,5 +74,6 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     if (document.querySelector("#friend-list")) {
         initAccueil();
+        void checkForUpdate();
     }
 });

@@ -32,6 +32,8 @@ tauri-plugin-global-shortcut = "2"
 # de laisser une seconde fenêtre s'ouvrir. Inutile/non supporté sur mobile.
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 # Sur Windows, meme sans set_focus(), afficher une fenetre peut l'activer et
 # lui voler le focus clavier/souris (grave si l'app active est un jeu plein
