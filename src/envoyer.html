@@ -39,13 +39,26 @@
         <div id="send-sidebar">
             <div class="send-label">Réglages</div>
 
-            <div class="settings-slider-block">
+            <div class="settings-slider-block" id="duration-block">
                 <div class="settings-slider-head"><span>Durée</span><span class="settings-slider-value" id="duration-value">4,0 s</span></div>
                 <input type="range" min="5" max="100" step="5" value="40" id="duration-slider" class="volume-slider">
-                <label class="full-video-row" id="full-video-row" hidden>
-                    <input type="checkbox" id="full-video-checkbox">
-                    Envoyer la vidéo entière (ignore la durée)
-                </label>
+            </div>
+
+            <div class="settings-slider-block" id="trim-block" hidden>
+                <div class="settings-slider-head"><span>Passage</span><span class="settings-slider-value" id="trim-value">0,0 s → 4,0 s</span></div>
+                <div class="trim-track" id="trim-track">
+                    <div class="trim-window" id="trim-window">
+                        <div class="trim-handle trim-handle-start" id="trim-handle-start"></div>
+                        <div class="trim-handle trim-handle-end" id="trim-handle-end"></div>
+                    </div>
+                </div>
+                <div class="trim-actions">
+                    <label class="full-video-row" id="full-video-row">
+                        <input type="checkbox" id="full-video-checkbox">
+                        Vidéo entière
+                    </label>
+                    <button type="button" id="preview-btn" class="preview-btn">▶ Aperçu</button>
+                </div>
             </div>
 
             <div class="settings-slider-block">

@@ -30,6 +30,14 @@ function initEnvoyer() {
     let media: MediaState = {type: "none"};
     let transparent = overlay.transparent;
     let useFullVideo = false;
+    // Passage choisi dans la vidéo source (poignées du timeline), en secondes.
+    // Sans rapport avec les images, qui utilisent le slider "Durée" classique.
+    let trimStart = 0;
+    let trimEnd = 4;
+    let videoDuration = 10;
+    const MIN_TRIM_SECONDS = 0.5;
+    const MAX_TRIM_SECONDS = 10;
+    let previewStopTimer: number | undefined;
 
     const chipsEl = document.querySelector<HTMLElement>("#recipients-chips");
     const mediaPanelEl = document.querySelector<HTMLElement>("#media-panel");
@@ -37,8 +45,15 @@ function initEnvoyer() {
     const durationValueEl = document.querySelector<HTMLElement>("#duration-value");
     const transparentToggle = document.querySelector<HTMLButtonElement>("#send-transparent-toggle");
     const transparentHintEl = document.querySelector<HTMLElement>("#transparent-hint");
-    const fullVideoRow = document.querySelector<HTMLElement>("#full-video-row");
     const fullVideoCheckbox = document.querySelector<HTMLInputElement>("#full-video-checkbox");
+    const durationBlock = document.querySelector<HTMLElement>("#duration-block");
+    const trimBlock = document.querySelector<HTMLElement>("#trim-block");
+    const trimTrack = document.querySelector<HTMLElement>("#trim-track");
+    const trimWindow = document.querySelector<HTMLElement>("#trim-window");
+    const trimHandleStart = document.querySelector<HTMLElement>("#trim-handle-start");
+    const trimHandleEnd = document.querySelector<HTMLElement>("#trim-handle-end");
+    const trimValueEl = document.querySelector<HTMLElement>("#trim-value");
+    const previewBtn = document.querySelector<HTMLButtonElement>("#preview-btn");
     const messageInput = document.querySelector<HTMLInputElement>("#message-input");
     const submitBtn = document.querySelector<HTMLButtonElement>("#send-jumpscare-submit");
     const footerTextEl = document.querySelector<HTMLElement>("#send-footer-text");
@@ -137,16 +152,19 @@ function initEnvoyer() {
 
     function updateFullVideoOption() {
         const isVideo = media.type === "file" && media.kind === "video";
-        if (fullVideoRow) fullVideoRow.hidden = !isVideo;
+        // Les images n'ont pas de passage à choisir : elles gardent le slider
+        // "Durée" classique, les vidéos passent sur le timeline à poignées.
+        if (durationBlock) durationBlock.hidden = isVideo;
+        if (trimBlock) trimBlock.hidden = !isVideo;
 
         if (!isVideo) useFullVideo = false;
         if (fullVideoCheckbox) fullVideoCheckbox.checked = useFullVideo;
-        if (durationSlider) durationSlider.disabled = isVideo && useFullVideo;
+        trimBlock?.classList.toggle("is-disabled", useFullVideo);
     }
 
     fullVideoCheckbox?.addEventListener("change", () => {
         useFullVideo = fullVideoCheckbox.checked;
-        if (durationSlider) durationSlider.disabled = useFullVideo;
+        trimBlock?.classList.toggle("is-disabled", useFullVideo);
     });
 
     function renderMediaPanel() {
@@ -202,7 +220,7 @@ function initEnvoyer() {
         renderMediaPanel();
         refreshSubmitState();
 
-        if (kind === "video" && durationSlider) {
+        if (kind === "video") {
             const probeUrl = media.previewUrl;
             const probe = document.createElement("video");
             probe.preload = "metadata";
@@ -210,8 +228,10 @@ function initEnvoyer() {
             probe.addEventListener("loadedmetadata", () => {
                 // Le fichier a pu changer pendant le chargement des métadonnées.
                 if (media.type !== "file" || media.previewUrl !== probeUrl) return;
-                const tenths = Math.min(100, Math.max(5, Math.round(probe.duration * 10)));
-                applyDurationSlider(tenths);
+                videoDuration = probe.duration;
+                trimStart = 0;
+                trimEnd = Math.min(4, videoDuration);
+                paintTrim();
             }, {once: true});
         }
     });
@@ -232,6 +252,95 @@ function initEnvoyer() {
         applyDurationSlider(Number(durationSlider.value));
         durationSlider.addEventListener("input", () => applyDurationSlider(Number(durationSlider!.value)));
     }
+
+    function clamp(value: number, min: number, max: number): number {
+        return Math.min(Math.max(value, min), max);
+    }
+
+    function paintTrim() {
+        if (!trimWindow || !trimValueEl || videoDuration <= 0) return;
+        const leftPct = (trimStart / videoDuration) * 100;
+        const widthPct = ((trimEnd - trimStart) / videoDuration) * 100;
+        trimWindow.style.left = `${leftPct}%`;
+        trimWindow.style.width = `${widthPct}%`;
+        const dur = trimEnd - trimStart;
+        trimValueEl.textContent = `${trimStart.toFixed(1).replace(".", ",")} s → ${trimEnd.toFixed(1).replace(".", ",")} s (${dur.toFixed(1).replace(".", ",")} s)`;
+    }
+
+    function setTrimStart(next: number) {
+        const capped = clamp(next, 0, trimEnd - MIN_TRIM_SECONDS);
+        trimStart = Math.max(capped, trimEnd - MAX_TRIM_SECONDS);
+        paintTrim();
+    }
+
+    function setTrimEnd(next: number) {
+        const capped = clamp(next, trimStart + MIN_TRIM_SECONDS, videoDuration);
+        trimEnd = Math.min(capped, trimStart + MAX_TRIM_SECONDS);
+        paintTrim();
+    }
+
+    function secondsPerPixel(): number {
+        const width = trimTrack?.getBoundingClientRect().width ?? 0;
+        return width > 0 ? videoDuration / width : 0;
+    }
+
+    // Glisser une poignée déplace uniquement son bord (bornée par l'autre
+    // bord + une largeur mini/maxi) ; glisser la zone déplace les deux bords
+    // ensemble, largeur inchangée.
+    function startTrimDrag(mode: "start" | "end" | "move", downEvent: PointerEvent) {
+        if (trimBlock?.classList.contains("is-disabled")) return;
+        downEvent.preventDefault();
+        const startX = downEvent.clientX;
+        const initStart = trimStart;
+        const initEnd = trimEnd;
+        const width = initEnd - initStart;
+
+        function onMove(moveEvent: PointerEvent) {
+            const deltaSec = (moveEvent.clientX - startX) * secondsPerPixel();
+            if (mode === "start") {
+                setTrimStart(initStart + deltaSec);
+            } else if (mode === "end") {
+                setTrimEnd(initEnd + deltaSec);
+            } else {
+                const newStart = clamp(initStart + deltaSec, 0, videoDuration - width);
+                trimStart = newStart;
+                trimEnd = newStart + width;
+                paintTrim();
+            }
+        }
+        function onUp() {
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+        }
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp, {once: true});
+    }
+
+    trimHandleStart?.addEventListener("pointerdown", (e) => startTrimDrag("start", e));
+    trimHandleEnd?.addEventListener("pointerdown", (e) => startTrimDrag("end", e));
+    trimWindow?.addEventListener("pointerdown", (e) => {
+        // Les poignées sont des enfants de trim-window : leur propre listener
+        // a déjà géré le drag, on évite de déclencher aussi un "move" ici.
+        if (e.target === trimHandleStart || e.target === trimHandleEnd) return;
+        startTrimDrag("move", e);
+    });
+
+    previewBtn?.addEventListener("click", () => {
+        const video = mediaPanelEl!.querySelector<HTMLVideoElement>(".media-preview-video");
+        if (!video) return;
+
+        window.clearTimeout(previewStopTimer);
+        video.loop = false;
+        video.muted = false;
+        video.currentTime = trimStart;
+        void video.play();
+
+        previewStopTimer = window.setTimeout(() => {
+            video.pause();
+            video.loop = true;
+            video.muted = true;
+        }, (trimEnd - trimStart) * 1000);
+    });
 
     function renderTransparentToggle() {
         transparentToggle?.classList.toggle("is-on", transparent);
@@ -269,8 +378,12 @@ function initEnvoyer() {
         if (message) form.append("message", message);
         form.append("transparent", String(transparent));
         if (!useFullVideo) {
-            const duration = Number(durationSlider?.value ?? 40) / 10;
+            const isVideo = media.kind === "video";
+            const duration = isVideo ? trimEnd - trimStart : Number(durationSlider?.value ?? 40) / 10;
             form.append("duration", String(duration));
+            if (isVideo && trimStart > 0) {
+                form.append("offset", String(trimStart));
+            }
         }
 
         const ids = recipients.map((r) => r.id).join(",");

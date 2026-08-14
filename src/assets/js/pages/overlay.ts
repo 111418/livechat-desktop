@@ -80,6 +80,17 @@ async function showLivechat(payload: LivechatPayload) {
         // Une vidéo sans boucle qui se termine avant le timer ferme l'overlay
         // tout de suite (couvre le cas "vidéo entière", sans durée envoyée).
         video.addEventListener("ended", hide);
+
+        // Passage choisi par l'expéditeur (trim) : on saute au bon point de
+        // départ dès que les métadonnées (durée/seek) sont dispos, avant que
+        // la première image ne s'affiche — sinon on verrait une image du
+        // tout début de la vidéo avant le saut.
+        if (typeof payload.offset === "number" && payload.offset > 0) {
+            const startOffset = payload.offset;
+            video.addEventListener("loadedmetadata", () => {
+                video.currentTime = startOffset;
+            }, {once: true});
+        }
     }
 
     if (messageEl) {

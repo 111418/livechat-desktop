@@ -289,6 +289,67 @@ body > main {
     accent-color: rgb(var(--color-primary));
 }
 
+.preview-btn {
+    @apply w-full border cursor-pointer font-bold text-xs px-3.5 py-2 rounded-[9px] bg-transparent transition-colors;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #b5bac1;
+}
+
+.preview-btn:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.trim-track {
+    @apply relative w-full rounded-lg select-none;
+    height: 34px;
+    background-color: #0c0d10;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.trim-window {
+    @apply absolute top-0 bottom-0 rounded-md cursor-grab;
+    background-color: rgba(151, 103, 241, 0.3);
+    border: 1.5px solid rgb(var(--color-primary));
+    box-shadow: 0 0 10px rgba(151, 103, 241, 0.45);
+}
+
+.trim-window:active {
+    cursor: grabbing;
+}
+
+.trim-handle {
+    @apply absolute top-0 bottom-0 w-3 rounded-[3px] cursor-ew-resize;
+    background-color: rgb(var(--color-primary));
+}
+
+.trim-handle-start {
+    left: -2px;
+}
+
+.trim-handle-end {
+    right: -2px;
+}
+
+.trim-actions {
+    @apply flex items-center justify-between gap-2.5;
+}
+
+.trim-actions .preview-btn {
+    width: auto;
+    white-space: nowrap;
+}
+
+/* La checkbox "Vidéo entière" doit rester cliquable même "désactivée" — sinon,
+   une fois cochée, plus aucun moyen de la décocher (elle est dans le même bloc
+   que le timeline/preview qu'elle grise). Seuls ces deux-là sont vraiment
+   coupés via pointer-events. */
+#trim-block.is-disabled .trim-track,
+#trim-block.is-disabled .preview-btn {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
 .send-position-title {
     @apply font-bold text-[12.5px] text-white block;
 }

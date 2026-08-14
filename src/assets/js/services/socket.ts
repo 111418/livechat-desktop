@@ -9,6 +9,7 @@ export interface LivechatPayload {
     author_name: string;
     author_avatar_hash?: string | null;
     duration?: number;
+    offset?: number;
 }
 
 // { user_id, username } de l'ami qui vient de se connecter/déconnecter.
