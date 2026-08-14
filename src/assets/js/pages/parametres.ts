@@ -1,9 +1,10 @@
 import {initials} from "../utils/avatar.ts";
 import {getAccount, setUsername, clearAccount} from "../utils/account-store.ts";
 import {getOverlaySettings, setOverlaySettings, type PositionId} from "../utils/overlay-settings-store.ts";
-import {getServerUrl, setServerUrl, clearToken} from "../services/config.ts";
+import {getServerUrl, setServerUrl, clearToken, getCloseToTray, setCloseToTray} from "../services/config.ts";
 import {apiRequest, ApiError} from "../services/api.ts";
 import {getUpdateSettings, setUpdateSettings} from "../utils/update-settings-store.ts";
+import {isEnabled as isAutostartEnabled, enable as enableAutostart, disable as disableAutostart} from "@tauri-apps/plugin-autostart";
 
 type Tab = "compte" | "overlay" | "serveur" | "securite";
 
@@ -27,6 +28,8 @@ const POSITION_LABELS: Record<PositionId, string> = {
 
 const account = getAccount();
 let serverUrl = "";
+let closeToTray = true;
+let autostartEnabled = false;
 
 const overlaySettings = getOverlaySettings();
 const updateSettings = getUpdateSettings();
@@ -47,6 +50,12 @@ async function initAccount(): Promise<void> {
     if (!navEl || !contentEl) return;
 
     serverUrl = await getServerUrl();
+    closeToTray = await getCloseToTray();
+    try {
+        autostartEnabled = await isAutostartEnabled();
+    } catch (err) {
+        console.error("Impossible de lire l'état du démarrage automatique :", err);
+    }
 
     function renderNav() {
         navEl!.querySelectorAll<HTMLButtonElement>(".settings-nav-item[data-tab]").forEach((btn) => {
@@ -149,6 +158,24 @@ async function initAccount(): Promise<void> {
                     <span class="settings-toggle-knob"></span>
                 </button>
             </div>
+            <div class="settings-card" style="margin-top:12px">
+                <div class="settings-name-col">
+                    <span class="settings-name" style="font-size:13.5px">Rester ouvert en arrière-plan</span>
+                    <span class="settings-subtext" style="font-weight:500;max-width:330px">La croix masque la fenêtre au lieu de fermer l'app, pour continuer à recevoir des jumpscares.</span>
+                </div>
+                <button type="button" class="settings-toggle${closeToTray ? " is-on" : ""}" id="close-to-tray-toggle" aria-pressed="${closeToTray}">
+                    <span class="settings-toggle-knob"></span>
+                </button>
+            </div>
+            <div class="settings-card" style="margin-top:12px">
+                <div class="settings-name-col">
+                    <span class="settings-name" style="font-size:13.5px">Démarrer avec Windows</span>
+                    <span class="settings-subtext" style="font-weight:500;max-width:330px">Lance Splatt automatiquement à l'ouverture de session.</span>
+                </div>
+                <button type="button" class="settings-toggle${autostartEnabled ? " is-on" : ""}" id="autostart-toggle" aria-pressed="${autostartEnabled}">
+                    <span class="settings-toggle-knob"></span>
+                </button>
+            </div>
         `;
     }
 
@@ -203,6 +230,32 @@ async function initAccount(): Promise<void> {
             toggle.classList.toggle("is-on", updateSettings.autoUpdate);
             toggle.setAttribute("aria-pressed", String(updateSettings.autoUpdate));
             setUpdateSettings(updateSettings);
+        });
+    }
+
+    function wireCloseToTrayToggle() {
+        const toggle = contentEl!.querySelector<HTMLButtonElement>("#close-to-tray-toggle");
+        toggle?.addEventListener("click", () => {
+            closeToTray = !closeToTray;
+            toggle.classList.toggle("is-on", closeToTray);
+            toggle.setAttribute("aria-pressed", String(closeToTray));
+            void setCloseToTray(closeToTray);
+        });
+    }
+
+    function wireAutostartToggle() {
+        const toggle = contentEl!.querySelector<HTMLButtonElement>("#autostart-toggle");
+        toggle?.addEventListener("click", async () => {
+            const next = !autostartEnabled;
+            try {
+                if (next) await enableAutostart();
+                else await disableAutostart();
+                autostartEnabled = next;
+                toggle.classList.toggle("is-on", autostartEnabled);
+                toggle.setAttribute("aria-pressed", String(autostartEnabled));
+            } catch (err) {
+                console.error("Impossible de changer le démarrage automatique :", err);
+            }
         });
     }
 
@@ -265,6 +318,8 @@ async function initAccount(): Promise<void> {
         wirePositionGrid();
         wireTransparentToggle();
         wireAutoUpdateToggle();
+        wireCloseToTrayToggle();
+        wireAutostartToggle();
         wireUsernameForm();
         wireServerChange();
         wireLogout();

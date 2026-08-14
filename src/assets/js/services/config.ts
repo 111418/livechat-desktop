@@ -11,6 +11,17 @@ export async function setServerUrl(url: string): Promise<void> {
     await store.save();
 }
 
+// Lu côté Rust (voir lib.rs) au moment de fermer la fenêtre principale : true
+// (défaut) = la croix masque juste la fenêtre, l'appli reste active en fond.
+export async function getCloseToTray(): Promise<boolean> {
+    return (await store.get<boolean>("closeToTray")) ?? true;
+}
+
+export async function setCloseToTray(value: boolean): Promise<void> {
+    await store.set("closeToTray", value);
+    await store.save();
+}
+
 export async function getToken(): Promise<string | null> {
     return (await store.get<string>("token")) ?? null;
 }

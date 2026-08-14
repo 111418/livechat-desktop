@@ -1,8 +1,18 @@
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use tauri_plugin_store::StoreExt;
+
+// Regroupe les imports specifiques desktop (absents sur mobile) : tray icon
+// et autostart n'existent pas sur Android/iOS.
+#[cfg(desktop)]
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+};
+#[cfg(desktop)]
+use tauri_plugin_autostart::ManagerExt;
 
 // Filet de secours : si le clic-a-travers ou le timer JS de duree merdoient,
 // Echap ferme quand meme l'overlay. Enregistre seulement pendant qu'un
@@ -94,6 +104,15 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init());
 
+    // Demarrage avec Windows (desactivable dans les parametres). MacosLauncher
+    // ne concerne que macOS (App/Launch Agent) ; sur Windows ca passe par une
+    // entree dans le registre, geree par le plugin de maniere transparente.
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_autostart::init(
+        tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+        None,
+    ));
+
     builder
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
@@ -119,12 +138,42 @@ pub fn run() {
             let store = app.store("config.json")?;
             let has_token = store.get("token").is_some();
             let target = if has_token { "index.html" } else { "login.html" };
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::App(target.into()))
+            let main_window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(target.into()))
                 .title("livechat")
                 .inner_size(1000.0, 600.0)
                 .visible(true)
                 .decorations(false)
                 .build()?;
+
+            // Clic sur la croix : par defaut on masque juste la fenetre au lieu de
+            // quitter (l'appli continue de tourner en arriere-plan pour recevoir
+            // des livechats), sauf si "closeToTray" a ete mis a false dans les
+            // parametres. api.prevent_close() annule la fermeture par defaut de
+            // Tauri ; sans lui la fenetre (et potentiellement l'appli, vu que
+            // c'est la seule fenetre visible) se fermerait quand meme.
+            #[cfg(desktop)]
+            {
+                let app_handle = app.handle().clone();
+                main_window.on_window_event(move |event| {
+                    if let WindowEvent::CloseRequested { api, .. } = event {
+                        let close_to_tray = app_handle
+                            .store("config.json")
+                            .ok()
+                            .and_then(|s| s.get("closeToTray"))
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(true);
+
+                        if close_to_tray {
+                            api.prevent_close();
+                            if let Some(w) = app_handle.get_webview_window("main") {
+                                let _ = w.hide();
+                            }
+                        } else {
+                            app_handle.exit(0);
+                        }
+                    }
+                });
+            }
 
             let overlay_window =
                 WebviewWindowBuilder::new(app, "overlay", WebviewUrl::App("overlay.html".into()))
@@ -164,6 +213,56 @@ pub fn run() {
                         GWL_EXSTYLE,
                         ex_style | WS_EX_NOACTIVATE.0 as isize,
                     );
+                }
+            }
+
+            // Icone dans la zone de notification : seul moyen de rouvrir la
+            // fenetre principale une fois qu'elle est masquee (voir le handler
+            // CloseRequested ci-dessus), et de vraiment quitter l'appli.
+            #[cfg(desktop)]
+            {
+                let open_item = MenuItem::with_id(app, "open", "Ouvrir Splatt", true, None::<&str>)?;
+                let quit_item = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>)?;
+                let tray_menu = Menu::with_items(app, &[&open_item, &quit_item])?;
+
+                TrayIconBuilder::new()
+                    .icon(app.default_window_icon().cloned().ok_or("no default window icon")?)
+                    .menu(&tray_menu)
+                    .tooltip("Splatt")
+                    .on_menu_event(|app, event| match event.id.as_ref() {
+                        "open" => {
+                            if let Some(w) = app.get_webview_window("main") {
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
+                        }
+                        "quit" => app.exit(0),
+                        _ => {}
+                    })
+                    .on_tray_icon_event(|tray, event| {
+                        if let TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } = event
+                        {
+                            let app = tray.app_handle();
+                            if let Some(w) = app.get_webview_window("main") {
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
+                        }
+                    })
+                    .build(app)?;
+
+                // Active le demarrage avec Windows par defaut, mais une seule fois
+                // (au tout premier lancement) : si l'utilisateur le desactive
+                // ensuite dans les parametres, on ne doit jamais le reactiver
+                // de force a un lancement suivant.
+                if store.get("autostartInitialized").is_none() {
+                    let _ = app.autolaunch().enable();
+                    store.set("autostartInitialized", true);
+                    store.save()?;
                 }
             }
 

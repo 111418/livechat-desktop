@@ -10,6 +10,12 @@ const DEFAULT_DURATION_SECONDS = 4;
 // Quelle que soit la valeur reçue (ou son absence), l'overlay ne doit jamais
 // pouvoir rester affiché indéfiniment — filet de secours en plus du timer normal.
 const MAX_DURATION_SECONDS = 60;
+// Marge ajoutée après la durée nominale avant de fermer : le décompte démarre
+// à "loadeddata" (juste avant que la vidéo affiche vraiment sa première
+// image), et la durée envoyée peut être arrondie à la dixième de seconde en
+// dessous de la vraie longueur -> sans marge, la toute fin (image/son) était
+// parfois coupée juste avant la fin réelle de la vidéo.
+const SAFETY_MARGIN_SECONDS = 0.5;
 
 function isVideoUrl(url: string): boolean {
     const clean = url.split("?")[0].split("#")[0];
@@ -96,7 +102,7 @@ async function showLivechat(payload: LivechatPayload) {
     const startCountdown = () => {
         if (started) return;
         started = true;
-        hideTimer = window.setTimeout(hide, duration * 1000);
+        hideTimer = window.setTimeout(hide, (duration + SAFETY_MARGIN_SECONDS) * 1000);
     };
     mediaElement.addEventListener(isVideo ? "loadeddata" : "load", startCountdown, {once: true});
     // Filet de secours si l'event de chargement ne se déclenche jamais (URL cassée, etc.).

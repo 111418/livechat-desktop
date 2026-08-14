@@ -1,6 +1,6 @@
 [package]
 name = "livechat"
-version = "0.2.3"
+version = "0.2.4"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -18,7 +18,9 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["macos-private-api"] }
+# tray-icon : nécessaire pour l'icône dans la zone de notification (fermer =
+# masquer en arrière-plan au lieu de quitter, réglable dans les paramètres).
+tauri = { version = "2", features = ["macos-private-api", "tray-icon"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -34,6 +36,7 @@ tauri-plugin-global-shortcut = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+tauri-plugin-autostart = "2"
 
 # Sur Windows, meme sans set_focus(), afficher une fenetre peut l'activer et
 # lui voler le focus clavier/souris (grave si l'app active est un jeu plein
