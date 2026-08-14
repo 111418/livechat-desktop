@@ -67,9 +67,19 @@ html, body {
     display: none;
 }
 
+/* En position absolue par-dessus le média (jamais en flux normal en dessous) :
+   sur un média très grand (proche de la taille de l'écran), un message posé
+   dans le flux normal pouvait se retrouver hors-écran ou repoussé sans place
+   pour s'afficher. Ancré au bord du wrap, il reste toujours visible, quelle
+   que soit la taille du média. */
 #overlay-message {
-    @apply text-white font-extrabold text-2xl text-center px-6;
+    @apply absolute left-0 right-0 bottom-0 text-white font-extrabold text-2xl text-center;
+    padding: 14px 20px;
+    /* Contour fin en plus du gradient/ombre : lisible même sur un média très
+       clair ou très chargé visuellement, sans dépendre du fond derrière. */
+    -webkit-text-stroke: 1.5px black;
     text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.65), transparent);
 }
 
 #overlay-message[hidden] {
@@ -78,5 +88,7 @@ html, body {
 
 /* En bas d'écran, le message se lit mieux au-dessus du média que dessous. */
 #overlay-root[data-position^="bottom-"] #overlay-message {
-    order: -1;
+    bottom: auto;
+    top: 0;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent);
 }
