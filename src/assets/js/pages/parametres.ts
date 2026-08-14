@@ -5,8 +5,10 @@ import {getServerUrl, setServerUrl, clearToken, getCloseToTray, setCloseToTray} 
 import {apiRequest, ApiError} from "../services/api.ts";
 import {getUpdateSettings, setUpdateSettings} from "../utils/update-settings-store.ts";
 import {isEnabled as isAutostartEnabled, enable as enableAutostart, disable as disableAutostart} from "@tauri-apps/plugin-autostart";
+import {fetchReleases, type ReleaseInfo} from "../services/releases.ts";
+import {openUrl} from "@tauri-apps/plugin-opener";
 
-type Tab = "compte" | "overlay" | "serveur" | "securite";
+type Tab = "compte" | "overlay" | "serveur" | "securite" | "changelog";
 
 const POSITION_GRID: PositionId[] = [
     "top-left", "top-center", "top-right",
@@ -30,6 +32,10 @@ const account = getAccount();
 let serverUrl = "";
 let closeToTray = true;
 let autostartEnabled = false;
+
+// null = pas encore chargé, tableau vide = chargé mais aucune release trouvée.
+let releases: ReleaseInfo[] | null = null;
+let releasesError: string | null = null;
 
 const overlaySettings = getOverlaySettings();
 const updateSettings = getUpdateSettings();
@@ -179,6 +185,56 @@ async function initAccount(): Promise<void> {
         `;
     }
 
+    function escapeHtml(text: string): string {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatReleaseDate(iso: string): string {
+        if (!iso) return "";
+        return new Date(iso).toLocaleDateString("fr-FR", {day: "numeric", month: "long", year: "numeric"});
+    }
+
+    function renderChangelogTab(): string {
+        if (releasesError) {
+            return `<div class="settings-callout">Impossible de charger les releases : ${escapeHtml(releasesError)}</div>`;
+        }
+        if (releases === null) {
+            return `<div class="settings-subtext">Chargement des dernières versions…</div>`;
+        }
+        if (releases.length === 0) {
+            return `<div class="settings-subtext">Aucune release publiée pour le moment.</div>`;
+        }
+        return releases.map((r) => `
+            <div class="settings-card-column" style="margin-bottom:12px">
+                <div class="settings-name-col" style="margin-bottom:6px">
+                    <span class="settings-name">${escapeHtml(r.name)}</span>
+                    <span class="settings-subtext">${formatReleaseDate(r.publishedAt)}</span>
+                </div>
+                ${r.body ? `<div class="changelog-body">${escapeHtml(r.body)}</div>` : ""}
+                <button type="button" class="settings-btn" style="margin-top:8px;margin-left:0" data-release-url="${escapeHtml(r.htmlUrl)}">Voir sur GitHub ↗</button>
+            </div>
+        `).join("");
+    }
+
+    function wireChangelogLinks() {
+        contentEl!.querySelectorAll<HTMLButtonElement>("[data-release-url]").forEach((btn) => {
+            btn.addEventListener("click", () => void openUrl(btn.dataset.releaseUrl!));
+        });
+    }
+
+    async function loadChangelog() {
+        if (releases !== null || releasesError) return;
+        try {
+            releases = await fetchReleases();
+        } catch (err) {
+            releasesError = err instanceof Error ? err.message : "Erreur inconnue.";
+            console.error("Impossible de charger les releases GitHub :", err);
+        }
+        if (activeTab === "changelog") renderContent();
+    }
+
     function wireVolumeSlider() {
         const slider = contentEl!.querySelector<HTMLInputElement>("#volume-slider");
         const valueEl = contentEl!.querySelector<HTMLElement>("#volume-value");
@@ -312,6 +368,7 @@ async function initAccount(): Promise<void> {
         if (activeTab === "compte") contentEl!.innerHTML = renderCompteTab();
         else if (activeTab === "overlay") contentEl!.innerHTML = renderOverlayTab();
         else if (activeTab === "serveur") contentEl!.innerHTML = renderServeurTab();
+        else if (activeTab === "changelog") contentEl!.innerHTML = renderChangelogTab();
         else contentEl!.innerHTML = renderSecuriteTab();
 
         wireVolumeSlider();
@@ -323,6 +380,9 @@ async function initAccount(): Promise<void> {
         wireUsernameForm();
         wireServerChange();
         wireLogout();
+        wireChangelogLinks();
+
+        if (activeTab === "changelog") void loadChangelog();
     }
 
     navEl.querySelectorAll<HTMLButtonElement>(".settings-nav-item[data-tab]").forEach((btn) => {

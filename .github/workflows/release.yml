@@ -15,6 +15,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Historique complet + tags necessaires pour retrouver le tag
+          # precedent et lister les commits depuis (etape "Generate changelog").
+          fetch-depth: 0
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -25,6 +29,22 @@ jobs:
       - name: Install frontend dependencies
         run: bun install
 
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 "${{ github.ref_name }}^" 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            LOG=$(git log --pretty=format:"- %s" "$PREV_TAG..${{ github.ref_name }}")
+          else
+            LOG=$(git log --pretty=format:"- %s" "${{ github.ref_name }}")
+          fi
+          {
+            echo "body<<CHANGELOG_EOF"
+            echo "$LOG"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -33,6 +53,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Splatt ${{ github.ref_name }}"
-          releaseBody: "Voir les changements sur GitHub."
+          releaseBody: ${{ steps.changelog.outputs.body }}
           releaseDraft: false
           prerelease: false
