@@ -77,7 +77,7 @@ export function initDemandes() {
                         </div>
                         <div class="request-actions">
                             <button type="button" class="accept-btn" data-accept="${r.id}">
-                                <img src="./assets/svg/icons/check.svg" alt="">
+                                <img src="/assets/svg/icons/check.svg" alt="">
                                 Accepter
                             </button>
                             <button type="button" class="reject-btn" data-reject="${r.id}" title="Refuser">✕</button>
@@ -106,7 +106,7 @@ export function initDemandes() {
                             <span class="request-name">${r.name}</span>
                         </div>
                         <span class="pending-badge">
-                            <img src="./assets/svg/icons/clock.svg" alt="">
+                            <img src="/assets/svg/icons/clock.svg" alt="">
                             En attente
                         </span>
                         <button type="button" class="cancel-btn" data-cancel="${r.id}">Annuler</button>

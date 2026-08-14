@@ -12,10 +12,20 @@ fn escape_shortcut() -> Shortcut {
 }
 
 fn hide_overlay_internal(app: &AppHandle) {
-    if let Some(overlay) = app.get_webview_window("overlay") {
-        let _ = overlay.hide();
-    }
-    let _ = app.global_shortcut().unregister(escape_shortcut());
+    // Le handler du raccourci Echap (voir plus bas) appelle cette fonction
+    // depuis l'intérieur même du callback de déclenchement du plugin
+    // global-shortcut. Si on appelait unregister() directement ici, on
+    // essaierait de reprendre un verrou interne au plugin déjà tenu pendant
+    // le dispatch de l'event -> deadlock (l'appli se fige/plante). En passant
+    // par run_on_main_thread, ce code s'exécute sur un tour de boucle
+    // suivant, une fois ce verrou relâché.
+    let app = app.clone();
+    let _ = app.clone().run_on_main_thread(move || {
+        if let Some(overlay) = app.get_webview_window("overlay") {
+            let _ = overlay.hide();
+        }
+        let _ = app.global_shortcut().unregister(escape_shortcut());
+    });
 }
 
 // Miroir exact du payload de l'event socket "livechat" envoye par livechat-api.

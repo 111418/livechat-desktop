@@ -9,7 +9,9 @@ export interface OverlaySettings {
 }
 
 const DEFAULT_SETTINGS: OverlaySettings = {
-    transparent: true,
+    // Plein écran = opt-in, pas opt-out : sinon un envoi sans y penser prend
+    // tout l'écran du destinataire par défaut.
+    transparent: false,
     position: "top-right",
     volume: 80,
 };

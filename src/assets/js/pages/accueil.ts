@@ -51,6 +51,7 @@ export function initAccueil() {
     const addGroupBtn = document.querySelector<HTMLButtonElement>("#add-group-btn");
     const addFriendBtn = document.querySelector<HTMLButtonElement>("#add-friend-btn");
     const modalRoot = document.querySelector<HTMLElement>("#modal-root");
+    const requestsNavLink = document.querySelector<HTMLElement>("#demandes-nav-link");
 
     if (!groupPillsEl || !friendListEl) return;
 
@@ -135,7 +136,7 @@ export function initAccueil() {
         }
 
         const statusHtml = friend.muted
-            ? `<span class="friend-status-text-muted"><img src="./assets/svg/icons/bell-off.svg" alt="" class="w-2.5 h-2.5">Muté · ne te réveillera pas</span>`
+            ? `<span class="friend-status-text-muted"><img src="/assets/svg/icons/bell-off.svg" alt="" class="w-2.5 h-2.5">Muté · ne te réveillera pas</span>`
             : `<span class="friend-status-text">App ouverte</span>`;
 
         return `
@@ -150,10 +151,10 @@ export function initAccueil() {
                 </div>
                 <div class="friend-actions">
                     <button type="button" class="mute-btn${friend.muted ? " mute-btn-active" : ""}" title="${friend.muted ? "Réactiver les jumpscares" : "Muter — bloque ses jumpscares"}">
-                        <img src="./assets/svg/icons/bell${friend.muted ? "-off" : ""}.svg" alt="">
+                        <img src="/assets/svg/icons/bell${friend.muted ? "-off" : ""}.svg" alt="">
                     </button>
                     <button type="button" class="select-check${selected ? "" : " is-empty"}">
-                        <img src="./assets/svg/icons/check.svg" alt="">
+                        <img src="/assets/svg/icons/check.svg" alt="">
                     </button>
                 </div>
             </div>
@@ -429,6 +430,19 @@ export function initAccueil() {
     // réapplique à chaque (re)chargement de la liste.
     const onlineIds = new Set<string>();
 
+    // Même logique de filtrage que demandes.ts : l'API ne pré-filtre pas les
+    // demandes refusées côté "received".
+    async function updateRequestsBadge() {
+        if (!requestsNavLink) return;
+        try {
+            const data = await apiRequest<{ received: { isRejected?: boolean | null }[] }>("/friends/requests");
+            const count = data.received.filter((r) => !(r.isRejected ?? (r as unknown as { is_rejected?: boolean }).is_rejected)).length;
+            requestsNavLink.dataset.count = String(count);
+        } catch (err) {
+            console.error("Impossible de charger le nombre de demandes :", err);
+        }
+    }
+
     async function loadFriends() {
         try {
             const remote = await fetchFriends();
@@ -493,6 +507,11 @@ export function initAccueil() {
             renderFriendList();
             updateSelectionBar();
         });
+
+        // Nouvelle demande reçue, ou une des nôtres acceptée/refusée : le badge
+        // "Demandes" doit refléter le compte à jour sans attendre un rechargement.
+        onSocket("friend_request", () => void updateRequestsBadge());
+        onSocket("friend_request_edit", () => void updateRequestsBadge());
     }).catch((err) => console.error("Connexion socket impossible :", err));
 
     searchInput?.addEventListener("input", () => {
@@ -527,4 +546,5 @@ export function initAccueil() {
     renderFriendList();
     updateSelectionBar();
     void loadFriends();
+    void updateRequestsBadge();
 }

@@ -28,6 +28,10 @@ html, body {
 
 #overlay-media-wrap {
     @apply relative max-w-full max-h-full flex items-center justify-center;
+    /* Plein écran transparent : aucun plafond de taille — un jumpscare peut
+       volontairement occuper tout l'écran (ex. faux élément de décor) pour
+       surprendre. Seuls max-w-full/max-h-full (bornés par le padding de
+       #overlay-root) empêchent un vrai débordement hors écran. */
 }
 
 #overlay-media {
@@ -35,15 +39,12 @@ html, body {
 }
 
 /* transparent === false côté payload : au lieu de prendre tout l'écran, le
-   média s'affiche dans un petit encart opaque façon notification, positionné
-   selon le réglage du destinataire — jamais un plein écran noir. */
+   média s'affiche en petit format façon notification, positionné selon le
+   réglage du destinataire — jamais un plein écran, et pas de fond/contour
+   pour ne pas ajouter un encart visible autour du média. */
 #overlay-root.is-opaque #overlay-media-wrap {
     max-width: min(420px, 90vw);
     max-height: min(320px, 90vh);
-    background-color: rgb(var(--color-dark));
-    border-radius: 16px;
-    padding: 14px;
-    box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.7);
 }
 
 #overlay-media img,
