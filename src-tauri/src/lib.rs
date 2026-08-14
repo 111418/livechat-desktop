@@ -219,50 +219,66 @@ pub fn run() {
             // Icone dans la zone de notification : seul moyen de rouvrir la
             // fenetre principale une fois qu'elle est masquee (voir le handler
             // CloseRequested ci-dessus), et de vraiment quitter l'appli.
+            //
+            // Tout ce bloc est facultatif (confort) : une erreur ici (icone
+            // manquante, echec du registre pour l'autostart, etc.) ne doit
+            // JAMAIS empecher le reste de l'appli de demarrer. D'ou l'usage
+            // d'une closure + match au lieu de `?`, qui remonterait l'erreur
+            // jusqu'a `run().expect(...)` et ferait planter tout le programme.
             #[cfg(desktop)]
             {
-                let open_item = MenuItem::with_id(app, "open", "Ouvrir Splatt", true, None::<&str>)?;
-                let quit_item = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>)?;
-                let tray_menu = Menu::with_items(app, &[&open_item, &quit_item])?;
+                let tray_and_autostart: Result<(), Box<dyn std::error::Error>> = (|| {
+                    let open_item = MenuItem::with_id(app, "open", "Ouvrir Splatt", true, None::<&str>)?;
+                    let quit_item = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>)?;
+                    let tray_menu = Menu::with_items(app, &[&open_item, &quit_item])?;
 
-                TrayIconBuilder::new()
-                    .icon(app.default_window_icon().cloned().ok_or("no default window icon")?)
-                    .menu(&tray_menu)
-                    .tooltip("Splatt")
-                    .on_menu_event(|app, event| match event.id.as_ref() {
-                        "open" => {
-                            if let Some(w) = app.get_webview_window("main") {
-                                let _ = w.show();
-                                let _ = w.set_focus();
+                    let mut tray = TrayIconBuilder::new()
+                        .menu(&tray_menu)
+                        .tooltip("Splatt")
+                        .on_menu_event(|app, event| match event.id.as_ref() {
+                            "open" => {
+                                if let Some(w) = app.get_webview_window("main") {
+                                    let _ = w.show();
+                                    let _ = w.set_focus();
+                                }
                             }
-                        }
-                        "quit" => app.exit(0),
-                        _ => {}
-                    })
-                    .on_tray_icon_event(|tray, event| {
-                        if let TrayIconEvent::Click {
-                            button: MouseButton::Left,
-                            button_state: MouseButtonState::Up,
-                            ..
-                        } = event
-                        {
-                            let app = tray.app_handle();
-                            if let Some(w) = app.get_webview_window("main") {
-                                let _ = w.show();
-                                let _ = w.set_focus();
+                            "quit" => app.exit(0),
+                            _ => {}
+                        })
+                        .on_tray_icon_event(|tray, event| {
+                            if let TrayIconEvent::Click {
+                                button: MouseButton::Left,
+                                button_state: MouseButtonState::Up,
+                                ..
+                            } = event
+                            {
+                                let app = tray.app_handle();
+                                if let Some(w) = app.get_webview_window("main") {
+                                    let _ = w.show();
+                                    let _ = w.set_focus();
+                                }
                             }
-                        }
-                    })
-                    .build(app)?;
+                        });
+                    if let Some(icon) = app.default_window_icon() {
+                        tray = tray.icon(icon.clone());
+                    }
+                    tray.build(app)?;
 
-                // Active le demarrage avec Windows par defaut, mais une seule fois
-                // (au tout premier lancement) : si l'utilisateur le desactive
-                // ensuite dans les parametres, on ne doit jamais le reactiver
-                // de force a un lancement suivant.
-                if store.get("autostartInitialized").is_none() {
-                    let _ = app.autolaunch().enable();
-                    store.set("autostartInitialized", true);
-                    store.save()?;
+                    // Active le demarrage avec Windows par defaut, mais une seule fois
+                    // (au tout premier lancement) : si l'utilisateur le desactive
+                    // ensuite dans les parametres, on ne doit jamais le reactiver
+                    // de force a un lancement suivant.
+                    if store.get("autostartInitialized").is_none() {
+                        let _ = app.autolaunch().enable();
+                        store.set("autostartInitialized", true);
+                        store.save()?;
+                    }
+
+                    Ok(())
+                })();
+
+                if let Err(e) = tray_and_autostart {
+                    eprintln!("Icone tray / demarrage automatique non initialises : {e}");
                 }
             }
 
