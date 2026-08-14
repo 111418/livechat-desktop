@@ -2,7 +2,7 @@ import {setSendContext} from "../utils/send-context-store.ts";
 import {isMuted, setMuted} from "../utils/muted-friends-store.ts";
 import {fetchFriends} from "../services/friends.ts";
 import {apiRequest, ApiError} from "../services/api.ts";
-import {connectSocket, onSocket, requestFriendsOnline, type FriendPresencePayload, type FriendRemovedPayload} from "../services/socket.ts";
+import {connectSocket, onSocket, requestFriendsOnline, type FriendPresencePayload, type FriendRemovedPayload, type FriendDndPayload} from "../services/socket.ts";
 
 interface Friend {
     id: string;
@@ -14,6 +14,7 @@ interface Friend {
     avatarUrl: string | null;
     online: boolean;
     muted: boolean;
+    dnd: boolean;
     groupIds: string[];
 }
 
@@ -137,6 +138,8 @@ export function initAccueil() {
 
         const statusHtml = friend.muted
             ? `<span class="friend-status-text-muted"><img src="/assets/svg/icons/bell-off.svg" alt="" class="w-2.5 h-2.5">Muté · ne te réveillera pas</span>`
+            : friend.dnd
+            ? `<span class="friend-status-text-dnd">🔕 Ne pas déranger</span>`
             : `<span class="friend-status-text">App ouverte</span>`;
 
         return `
@@ -429,6 +432,7 @@ export function initAccueil() {
     // n'ait fini : on les garde ici, indépendamment de FRIENDS, et on les
     // réapplique à chaque (re)chargement de la liste.
     const onlineIds = new Set<string>();
+    const dndIds = new Set<string>();
 
     // Même logique de filtrage que demandes.ts : l'API ne pré-filtre pas les
     // demandes refusées côté "received".
@@ -456,6 +460,7 @@ export function initAccueil() {
                 avatarUrl: f.avatarUrl,
                 online: onlineIds.has(f.discordId),
                 muted: isMuted(f.discordId),
+                dnd: dndIds.has(f.discordId),
                 groupIds: [],
             }));
         } catch (err) {
@@ -494,9 +499,33 @@ export function initAccueil() {
 
         onSocket("friend_offline", (payload: FriendPresencePayload) => {
             onlineIds.delete(payload.user_id);
+            dndIds.delete(payload.user_id);
             const friend = FRIENDS.find((f) => f.discordId === payload.user_id);
             if (friend) {
                 friend.online = false;
+                friend.dnd = false;
+                renderFriendList();
+            }
+        });
+
+        onSocket("dnd_online", (ids: string[]) => {
+            ids.forEach((id) => dndIds.add(id));
+            let changed = false;
+            FRIENDS.forEach((f) => {
+                if (dndIds.has(f.discordId) && !f.dnd) {
+                    f.dnd = true;
+                    changed = true;
+                }
+            });
+            if (changed) renderFriendList();
+        });
+
+        onSocket("friend_dnd", (payload: FriendDndPayload) => {
+            if (payload.dnd) dndIds.add(payload.user_id);
+            else dndIds.delete(payload.user_id);
+            const friend = FRIENDS.find((f) => f.discordId === payload.user_id);
+            if (friend) {
+                friend.dnd = payload.dnd;
                 renderFriendList();
             }
         });

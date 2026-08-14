@@ -4,11 +4,24 @@ import { getAccount, setAccount, type Account } from "./assets/js/utils/account-
 import { initAccueil } from "./assets/js/pages/accueil.ts";
 import { isMuted } from "./assets/js/utils/muted-friends-store.ts";
 import { fetchMe } from "./assets/js/services/me.ts";
-import { connectSocket, onSocket, type LivechatPayload } from "./assets/js/services/socket.ts";
+import { connectSocket, onSocket, requestSetDnd, type LivechatPayload } from "./assets/js/services/socket.ts";
 import { checkForUpdate } from "./assets/js/services/updater.ts";
 
 let greetInputEl: HTMLInputElement | null;
 let greetMsgEl: HTMLElement | null;
+// Etat local du "Ne pas déranger" — pas persisté : redémarre toujours à
+// false, comme le statut en ligne lui-même (déterminé par la connexion socket).
+let dndEnabled = false;
+
+function wireDndToggle(): void {
+    const btn = document.querySelector<HTMLButtonElement>("#dnd-toggle");
+    btn?.addEventListener("click", () => {
+        dndEnabled = !dndEnabled;
+        btn.classList.toggle("is-active", dndEnabled);
+        btn.setAttribute("aria-pressed", String(dndEnabled));
+        requestSetDnd(dndEnabled);
+    });
+}
 
 function paintAccount(account: Account): void {
     const userAvatar = document.querySelector("#user-avatar");
@@ -65,7 +78,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     try {
         await connectSocket();
         onSocket("livechat", (payload: LivechatPayload) => {
-            if (isMuted(payload.author_discord_id)) return;
+            if (isMuted(payload.author_discord_id) || dndEnabled) return;
             void invoke("show_overlay", { payload });
         });
     } catch (err) {
@@ -74,6 +87,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     if (document.querySelector("#friend-list")) {
         initAccueil();
+        wireDndToggle();
         void checkForUpdate();
     }
 });

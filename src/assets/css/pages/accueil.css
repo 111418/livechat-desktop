@@ -13,6 +13,24 @@
     @apply w-5 h-5 leading-none absolute flex justify-center items-center rounded-full;
 }
 
+.dnd-toggle {
+    @apply relative border rounded-lg flex w-fit px-3 justify-center items-center gap-2 font-medium py-0.5 cursor-pointer transition-colors text-sm;
+    border-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.04);
+    color: #b5bac1;
+}
+
+.dnd-toggle:hover {
+    border-color: rgba(255, 255, 255, 0.22);
+    color: #fff;
+}
+
+.dnd-toggle.is-active {
+    border-color: rgba(var(--color-red), 0.5);
+    background-color: rgba(var(--color-red), 0.18);
+    color: rgb(var(--color-red));
+}
+
 #friend-list {
     @apply flex-1 min-h-0 overflow-y-auto px-2.5 pb-2 flex flex-col gap-[3px];
     scrollbar-color: rgba(var(--color-gray), 0.5) rgba(var(--color-gray), 0.1);
@@ -83,6 +101,11 @@
 .friend-status-text-muted {
     @apply flex items-center gap-1 text-[11px] font-semibold;
     color: rgb(var(--color-yellow));
+}
+
+.friend-status-text-dnd {
+    @apply flex items-center gap-1 text-[11px] font-semibold;
+    color: rgb(var(--color-red));
 }
 
 .friend-actions {

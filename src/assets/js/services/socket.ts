@@ -22,6 +22,12 @@ export interface FriendRemovedPayload {
     user_id: string;
 }
 
+// { user_id, dnd } émis quand un ami active/désactive "Ne pas déranger".
+export interface FriendDndPayload {
+    user_id: string;
+    dnd: boolean;
+}
+
 // { sender_username, sender_id }
 export interface FriendRequestPayload {
     sender_username: string;
@@ -38,8 +44,11 @@ export interface FriendRequestEditPayload {
 interface SocketEvents {
     // Snapshot envoyé juste après authenticate : ids Discord des amis déjà en ligne.
     friends_online: string[];
+    // Snapshot équivalent pour "Ne pas déranger" : sous-ensemble de friends_online.
+    dnd_online: string[];
     friend_online: FriendPresencePayload;
     friend_offline: FriendPresencePayload;
+    friend_dnd: FriendDndPayload;
     friend_removed: FriendRemovedPayload;
     friend_request: FriendRequestPayload;
     friend_request_edit: FriendRequestEditPayload;
@@ -93,6 +102,11 @@ export function connectSocket(): Promise<Socket> {
 // dépendance au timing exact du snapshot automatique envoyé après authenticate.
 export function requestFriendsOnline(): void {
     socket?.emit("get_friends_online");
+}
+
+// Diffuse l'état "Ne pas déranger" du compte courant à tous ses amis.
+export function requestSetDnd(enabled: boolean): void {
+    socket?.emit("set_dnd", enabled);
 }
 
 export function onSocket<E extends keyof SocketEvents>(
