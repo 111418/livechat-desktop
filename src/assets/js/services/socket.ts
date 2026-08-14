@@ -61,9 +61,20 @@ export function connectSocket(): Promise<Socket> {
         if (!serverUrl || !token) throw new Error("Serveur ou token manquant pour la connexion socket.");
 
         const parsed = new URL(serverUrl);
-        const wsUrl = `${parsed.protocol}//${parsed.hostname}:3330`;
+        // En local, l'API dev lance le WebSocket sur un port séparé codé en
+        // dur (3330). En prod, ce port n'est pas exposé publiquement : le
+        // serveur passe par un reverse proxy qui route un chemin (/websocket)
+        // sur le même domaine/port que l'API REST — voir ce que ton pote a
+        // configuré avant de changer ce comportement.
+        const isLocal = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+        const wsUrl = isLocal
+            ? `${parsed.protocol}//${parsed.hostname}:3330`
+            : `${parsed.protocol}//${parsed.host}`;
 
-        const newSocket = io(wsUrl, { transports: ["websocket"] });
+        const newSocket = io(wsUrl, {
+            transports: ["websocket"],
+            ...(isLocal ? {} : { path: "/websocket/socket.io/" }),
+        });
         newSocket.on("connect", () => {
             newSocket.emit("authenticate", token);
         });
