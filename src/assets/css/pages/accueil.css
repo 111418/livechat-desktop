@@ -13,6 +13,10 @@
     @apply w-5 h-5 leading-none absolute flex justify-center items-center rounded-full;
 }
 
+#refresh-friends-btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+}
+
 .dnd-toggle {
     @apply relative border rounded-lg flex w-fit px-3 justify-center items-center gap-2 font-medium py-0.5 cursor-pointer transition-colors text-sm;
     border-color: rgba(255, 255, 255, 0.12);

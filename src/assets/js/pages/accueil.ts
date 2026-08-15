@@ -53,6 +53,7 @@ export function initAccueil() {
     const addFriendBtn = document.querySelector<HTMLButtonElement>("#add-friend-btn");
     const modalRoot = document.querySelector<HTMLElement>("#modal-root");
     const requestsNavLink = document.querySelector<HTMLElement>("#demandes-nav-link");
+    const refreshBtn = document.querySelector<HTMLButtonElement>("#refresh-friends-btn");
 
     if (!groupPillsEl || !friendListEl) return;
 
@@ -576,4 +577,19 @@ export function initAccueil() {
     updateSelectionBar();
     void loadFriends();
     void updateRequestsBadge();
+
+    // Filet de secours au cas où les events socket friend_online/offline
+    // ne suivraient pas en direct (ex. connexion longue durée, reverse
+    // proxy) : bouton manuel + rafraîchissement automatique périodique.
+    async function refreshAll() {
+        if (refreshBtn) refreshBtn.disabled = true;
+        await loadFriends();
+        await updateRequestsBadge();
+        if (refreshBtn) refreshBtn.disabled = false;
+    }
+
+    refreshBtn?.addEventListener("click", () => void refreshAll());
+
+    const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+    window.setInterval(() => void refreshAll(), AUTO_REFRESH_INTERVAL_MS);
 }
