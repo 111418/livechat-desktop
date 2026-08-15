@@ -203,9 +203,7 @@ function initEnvoyer() {
         updateFullVideoOption();
     }
 
-    fileInput.addEventListener("change", () => {
-        const file = fileInput.files?.[0];
-        if (!file) return;
+    function setMediaFromFile(file: File) {
         revokePreview();
         const kind = file.type.startsWith("video/") ? "video" : "image";
         media = {
@@ -216,7 +214,6 @@ function initEnvoyer() {
             previewUrl: URL.createObjectURL(file),
             kind,
         };
-        fileInput.value = "";
         renderMediaPanel();
         refreshSubmitState();
 
@@ -233,6 +230,31 @@ function initEnvoyer() {
                 trimEnd = Math.min(4, videoDuration);
                 paintTrim();
             }, {once: true});
+        }
+    }
+
+    fileInput.addEventListener("change", () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        setMediaFromFile(file);
+        fileInput.value = "";
+    });
+
+    // Coller une image (ex. capture d'écran Win+Shift+S encore dans le
+    // presse-papier) directement dans la page, sans avoir à la sauvegarder
+    // sur le disque puis la choisir via le sélecteur de fichier.
+    document.addEventListener("paste", (e: ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of items) {
+            if (!item.type.startsWith("image/")) continue;
+            const file = item.getAsFile();
+            if (!file) continue;
+            e.preventDefault();
+            // Le presse-papier ne donne pas toujours un nom de fichier utile.
+            const named = new File([file], file.name || `image-collee.${file.type.split("/")[1] ?? "png"}`, {type: file.type});
+            setMediaFromFile(named);
+            break;
         }
     });
 
@@ -290,6 +312,12 @@ function initEnvoyer() {
     function startTrimDrag(mode: "start" | "end" | "move", downEvent: PointerEvent) {
         if (trimBlock?.classList.contains("is-disabled")) return;
         downEvent.preventDefault();
+        // Capture le pointeur sur l'élément cliqué : sans ça, le drag peut
+        // décrocher (ne plus suivre la souris) dès qu'elle bouge vite ou
+        // sort des poignées, qui sont fines (12px).
+        const target = downEvent.target as Element;
+        target.setPointerCapture?.(downEvent.pointerId);
+
         const startX = downEvent.clientX;
         const initStart = trimStart;
         const initEnd = trimEnd;
@@ -309,6 +337,7 @@ function initEnvoyer() {
             }
         }
         function onUp() {
+            target.releasePointerCapture?.(downEvent.pointerId);
             window.removeEventListener("pointermove", onMove);
             window.removeEventListener("pointerup", onUp);
         }

@@ -305,6 +305,7 @@ body > main {
     height: 34px;
     background-color: #0c0d10;
     border: 1px solid rgba(255, 255, 255, 0.08);
+    touch-action: none;
 }
 
 .trim-window {
@@ -312,6 +313,7 @@ body > main {
     background-color: rgba(151, 103, 241, 0.3);
     border: 1.5px solid rgb(var(--color-primary));
     box-shadow: 0 0 10px rgba(151, 103, 241, 0.45);
+    touch-action: none;
 }
 
 .trim-window:active {
@@ -321,6 +323,7 @@ body > main {
 .trim-handle {
     @apply absolute top-0 bottom-0 w-3 rounded-[3px] cursor-ew-resize;
     background-color: rgb(var(--color-primary));
+    touch-action: none;
 }
 
 .trim-handle-start {

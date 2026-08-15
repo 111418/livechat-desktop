@@ -54,13 +54,13 @@ html, body {
 
 /* Pseudo (+ photo si connue) de l'expéditeur, en badge coin haut-droit du média. */
 #overlay-author {
-    @apply absolute top-2.5 right-2.5 flex items-center gap-1.5 text-white font-bold text-xs pl-1 pr-2.5 py-1 rounded-full;
+    @apply absolute top-2.5 right-2.5 flex items-center gap-2 text-white font-bold text-sm pl-1.5 pr-3.5 py-1.5 rounded-full;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
 }
 
 #overlay-author img {
-    @apply w-5 h-5 rounded-full object-cover shrink-0;
+    @apply w-7 h-7 rounded-full object-cover shrink-0;
 }
 
 #overlay-author[hidden] {
