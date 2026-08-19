@@ -34,6 +34,12 @@ async function resolveMediaUrl(url: string): Promise<string> {
 }
 
 let hideTimer: number | undefined;
+// Si un 2e jumpscare arrive pendant que le 1er est encore affiché, il
+// écrasait silencieusement le premier (même <video>/<img> remplacés) sans
+// jamais s'afficher lui-même une fois le 1er terminé. Une vraie file
+// d'attente les montre l'un après l'autre.
+const queue: LivechatPayload[] = [];
+let isShowing = false;
 
 function hide() {
     if (hideTimer) {
@@ -44,10 +50,20 @@ function hide() {
     // continue de jouer (et de faire du bruit) en arrière-plan une fois cachée.
     const video = document.querySelector<HTMLVideoElement>("#overlay-media video");
     video?.pause();
-    void invoke("hide_overlay");
+
+    const next = queue.shift();
+    if (next) {
+        // Un jumpscare est déjà en attente : on enchaîne directement, la
+        // fenêtre reste affichée pour éviter un clignotement caché/affiché.
+        void showLivechat(next);
+    } else {
+        isShowing = false;
+        void invoke("hide_overlay");
+    }
 }
 
 async function showLivechat(payload: LivechatPayload) {
+    isShowing = true;
     const root = document.querySelector<HTMLElement>("#overlay-root");
     const mediaEl = document.querySelector<HTMLElement>("#overlay-media");
     const authorEl = document.querySelector<HTMLElement>("#overlay-author");
@@ -121,5 +137,9 @@ async function showLivechat(payload: LivechatPayload) {
 }
 
 void listen<LivechatPayload>("livechat", (event) => {
+    if (isShowing) {
+        queue.push(event.payload);
+        return;
+    }
     void showLivechat(event.payload);
 });

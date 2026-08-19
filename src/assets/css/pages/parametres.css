@@ -155,6 +155,66 @@ body > main {
     @apply flex gap-2 mt-2;
 }
 
+.group-manage-header {
+    @apply flex items-center gap-3;
+    margin-bottom: 10px;
+}
+
+.group-manage-header .group-name-label {
+    @apply flex-1;
+}
+
+.group-manage-header .group-name-input {
+    @apply flex-1;
+    padding: 6px 10px;
+}
+
+.group-manage-actions {
+    @apply flex items-center gap-2 shrink-0;
+}
+
+.group-manage-actions .settings-btn {
+    margin-left: 0;
+}
+
+.group-member-list {
+    @apply flex flex-col gap-2;
+}
+
+.group-member-row {
+    @apply flex items-center gap-2.5 rounded-lg px-2.5 py-1.5;
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.group-member-avatar {
+    @apply w-7 h-7 text-[11px];
+}
+
+.group-member-name {
+    @apply flex-1 text-sm font-semibold text-white;
+}
+
+.group-member-remove {
+    @apply border-none cursor-pointer text-[11px] font-bold rounded-full w-6 h-6 flex items-center justify-center transition-colors shrink-0;
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #b5bac1;
+}
+
+.group-member-remove:hover {
+    background-color: rgba(var(--color-red), 0.2);
+    color: rgb(var(--color-red));
+}
+
+.group-add-row {
+    @apply flex items-center gap-2;
+    margin-top: 10px;
+}
+
+.group-add-select {
+    @apply flex-1;
+    padding: 6px 10px;
+}
+
 /* Toggle switch */
 .settings-toggle {
     @apply ml-auto w-11 h-[25px] rounded-full border-none cursor-pointer relative shrink-0 transition-colors;

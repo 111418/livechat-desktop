@@ -6,6 +6,7 @@ import { isMuted } from "./assets/js/utils/muted-friends-store.ts";
 import { fetchMe } from "./assets/js/services/me.ts";
 import { connectSocket, onSocket, requestSetDnd, type LivechatPayload } from "./assets/js/services/socket.ts";
 import { checkForUpdate } from "./assets/js/services/updater.ts";
+import { getTextScale } from "./assets/js/services/config.ts";
 
 let greetInputEl: HTMLInputElement | null;
 let greetMsgEl: HTMLElement | null;
@@ -61,6 +62,12 @@ async function greet() {
         });
     }
 }
+
+// Zoom CSS natif WebView2 : plus fiable ici qu'un simple font-size racine,
+// vu que beaucoup de tailles du projet sont en px fixe plutôt qu'en rem.
+void getTextScale().then((scale) => {
+    (document.documentElement.style as CSSStyleDeclaration & {zoom: string}).zoom = `${scale}%`;
+});
 
 window.addEventListener("DOMContentLoaded", async () => {
     greetInputEl = document.querySelector("#greet-input");

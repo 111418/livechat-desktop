@@ -22,6 +22,19 @@ export async function setCloseToTray(value: boolean): Promise<void> {
     await store.save();
 }
 
+// Pourcentage de zoom appliqué à toute l'UI (voir main.ts) : beaucoup de
+// tailles dans ce projet sont en px fixe plutôt qu'en rem, donc un simple
+// changement du font-size racine n'affecterait pas grand-chose — le zoom
+// CSS (natif WebView2/Chromium) met tout à l'échelle uniformément.
+export async function getTextScale(): Promise<number> {
+    return (await store.get<number>("textScale")) ?? 100;
+}
+
+export async function setTextScale(value: number): Promise<void> {
+    await store.set("textScale", value);
+    await store.save();
+}
+
 export async function getToken(): Promise<string | null> {
     return (await store.get<string>("token")) ?? null;
 }

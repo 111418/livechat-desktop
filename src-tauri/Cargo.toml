@@ -1,6 +1,6 @@
 [package]
 name = "livechat"
-version = "0.3.0"
+version = "0.4.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -20,7 +20,9 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 # tray-icon : nécessaire pour l'icône dans la zone de notification (fermer =
 # masquer en arrière-plan au lieu de quitter, réglable dans les paramètres).
-tauri = { version = "2", features = ["macos-private-api", "tray-icon"] }
+# devtools : normalement automatique en debug, forcé ici pour être aussi
+# dispo dans le build de release (utile pour déboguer sans terminal).
+tauri = { version = "2", features = ["macos-private-api", "tray-icon", "devtools"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

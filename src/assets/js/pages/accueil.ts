@@ -1,5 +1,6 @@
 import {setSendContext} from "../utils/send-context-store.ts";
 import {isMuted, setMuted} from "../utils/muted-friends-store.ts";
+import {loadPersistedGroupsData, persistGroups} from "../utils/groups-store.ts";
 import {fetchFriends} from "../services/friends.ts";
 import {apiRequest, ApiError} from "../services/api.ts";
 import {connectSocket, onSocket, requestFriendsOnline, type FriendPresencePayload, type FriendRemovedPayload, type FriendDndPayload} from "../services/socket.ts";
@@ -25,7 +26,10 @@ interface Group {
 
 const ALL_GROUP_ID = "all";
 
-// Les groupes n'existent pas côté API — fonctionnalité 100% locale, non persistée.
+// Les groupes n'existent pas côté API — fonctionnalité 100% locale, persistée
+// via tauri-plugin-store (voir groups-store.ts) pour survivre à un F5/redémarrage.
+// Hydraté de façon async au premier loadFriends() (voir plus bas) : reste vide
+// jusque-là, GROUPS.push(...) une fois les données chargées (même référence).
 const GROUPS: Group[] = [];
 
 let FRIENDS: Friend[] = [];
@@ -103,6 +107,7 @@ export function initAccueil() {
             FRIENDS.forEach((f) => {
                 f.groupIds = f.groupIds.filter((id) => id !== groupId);
             });
+            void persistGroups(GROUPS, FRIENDS);
 
             if (activeGroupId === groupId) {
                 activeGroupId = ALL_GROUP_ID;
@@ -365,6 +370,7 @@ export function initAccueil() {
                 const friend = FRIENDS.find((f) => f.id === friendId);
                 if (friend && !friend.groupIds.includes(id)) friend.groupIds.push(id);
             });
+            void persistGroups(GROUPS, FRIENDS);
 
             closeModal();
             selectGroup(id);
@@ -448,9 +454,24 @@ export function initAccueil() {
         }
     }
 
+    // Chargé une seule fois (premier loadFriends()) depuis le store persistant ;
+    // ensuite l'état en mémoire (FRIENDS/GROUPS) fait foi, pas besoin de relire.
+    let persistedGroupsData: {groups: {id: string; label: string}[]; membership: Record<string, string[]>} | null = null;
+
     async function loadFriends() {
         try {
+            if (persistedGroupsData === null) {
+                persistedGroupsData = await loadPersistedGroupsData();
+                GROUPS.push(...persistedGroupsData.groups);
+            }
             const remote = await fetchFriends();
+            const membership = persistedGroupsData.membership;
+            // Les groupes sont 100% locaux (jamais envoyés au serveur) : sans
+            // ça, chaque rechargement (bouton actualiser, auto-refresh) repartirait
+            // de groupIds vides. On reprend d'abord l'état en mémoire (déjà à jour
+            // pendant la session), et sinon la version persistée chargée ci-dessus
+            // (cas du tout premier chargement après un F5/redémarrage de l'app).
+            const previousGroupIds = new Map(FRIENDS.map((f) => [f.discordId, f.groupIds]));
             FRIENDS = remote.map((f) => ({
                 id: f.discordId,
                 discordId: f.discordId,
@@ -462,7 +483,7 @@ export function initAccueil() {
                 online: onlineIds.has(f.discordId),
                 muted: isMuted(f.discordId),
                 dnd: dndIds.has(f.discordId),
-                groupIds: [],
+                groupIds: previousGroupIds.get(f.discordId) ?? membership[f.discordId] ?? [],
             }));
         } catch (err) {
             console.error("Impossible de charger les amis :", err);

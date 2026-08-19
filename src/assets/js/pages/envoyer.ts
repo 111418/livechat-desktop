@@ -353,6 +353,23 @@ function initEnvoyer() {
         if (e.target === trimHandleStart || e.target === trimHandleEnd) return;
         startTrimDrag("move", e);
     });
+    // Cliquer directement sur la piste (en dehors de la petite fenêtre de
+    // sélection) déplaçait la sélection nulle part avant ça : rien n'était
+    // câblé dessus, donc cliquer "au milieu" d'une longue vidéo ne faisait
+    // rien et donnait l'impression que le trim restait bloqué au début.
+    trimTrack?.addEventListener("pointerdown", (e) => {
+        if (e.target !== trimTrack) return; // clic sur la fenêtre/poignée : déjà géré au-dessus
+        if (trimBlock?.classList.contains("is-disabled")) return;
+        const rect = trimTrack.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const clickedSec = ((e.clientX - rect.left) / rect.width) * videoDuration;
+        const width = trimEnd - trimStart;
+        const newStart = clamp(clickedSec - width / 2, 0, videoDuration - width);
+        trimStart = newStart;
+        trimEnd = newStart + width;
+        paintTrim();
+        startTrimDrag("move", e);
+    });
 
     previewBtn?.addEventListener("click", () => {
         const video = mediaPanelEl!.querySelector<HTMLVideoElement>(".media-preview-video");

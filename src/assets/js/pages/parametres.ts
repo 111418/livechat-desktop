@@ -1,14 +1,16 @@
 import {initials} from "../utils/avatar.ts";
 import {getAccount, setUsername, clearAccount} from "../utils/account-store.ts";
 import {getOverlaySettings, setOverlaySettings, type PositionId} from "../utils/overlay-settings-store.ts";
-import {getServerUrl, setServerUrl, clearToken, getCloseToTray, setCloseToTray} from "../services/config.ts";
+import {getServerUrl, setServerUrl, clearToken, getCloseToTray, setCloseToTray, getTextScale, setTextScale} from "../services/config.ts";
 import {apiRequest, ApiError} from "../services/api.ts";
 import {getUpdateSettings, setUpdateSettings} from "../utils/update-settings-store.ts";
 import {isEnabled as isAutostartEnabled, enable as enableAutostart, disable as disableAutostart} from "@tauri-apps/plugin-autostart";
 import {fetchReleases, type ReleaseInfo} from "../services/releases.ts";
 import {openUrl} from "@tauri-apps/plugin-opener";
+import {fetchFriends, type RemoteFriend} from "../services/friends.ts";
+import {loadPersistedGroupsData, saveGroupsData, type GroupsData} from "../utils/groups-store.ts";
 
-type Tab = "compte" | "overlay" | "serveur" | "securite" | "changelog";
+type Tab = "compte" | "overlay" | "serveur" | "groupes" | "securite" | "changelog";
 
 const POSITION_GRID: PositionId[] = [
     "top-left", "top-center", "top-right",
@@ -32,10 +34,15 @@ const account = getAccount();
 let serverUrl = "";
 let closeToTray = true;
 let autostartEnabled = false;
+let textScale = 100;
 
 // null = pas encore chargé, tableau vide = chargé mais aucune release trouvée.
 let releases: ReleaseInfo[] | null = null;
 let releasesError: string | null = null;
+
+let groupsData: GroupsData | null = null;
+let groupsFriends: RemoteFriend[] = [];
+let groupsError: string | null = null;
 
 const overlaySettings = getOverlaySettings();
 const updateSettings = getUpdateSettings();
@@ -57,6 +64,7 @@ async function initAccount(): Promise<void> {
 
     serverUrl = await getServerUrl();
     closeToTray = await getCloseToTray();
+    textScale = await getTextScale();
     try {
         autostartEnabled = await isAutostartEnabled();
     } catch (err) {
@@ -182,6 +190,13 @@ async function initAccount(): Promise<void> {
                     <span class="settings-toggle-knob"></span>
                 </button>
             </div>
+            <div class="settings-card-column" style="margin-top:12px">
+                <div class="settings-name" style="margin-bottom:12px">Taille du texte</div>
+                <div class="volume-row">
+                    <input type="range" min="80" max="150" step="5" value="${textScale}" class="volume-slider" id="text-scale-slider">
+                    <span class="volume-value" id="text-scale-value">${textScale}%</span>
+                </div>
+            </div>
         `;
     }
 
@@ -235,6 +250,146 @@ async function initAccount(): Promise<void> {
         if (activeTab === "changelog") renderContent();
     }
 
+    function renderGroupesTab(): string {
+        if (groupsError) {
+            return `<div class="settings-callout">Impossible de charger les groupes : ${escapeHtml(groupsError)}</div>`;
+        }
+        if (groupsData === null) {
+            return `<div class="settings-subtext">Chargement des groupes…</div>`;
+        }
+        if (groupsData.groups.length === 0) {
+            return `<div class="settings-subtext">Aucun groupe pour l'instant — crées-en un depuis l'accueil (bouton « + Groupe »), il apparaîtra ici pour être géré.</div>`;
+        }
+
+        const friendById = new Map(groupsFriends.map((f) => [f.discordId, f]));
+
+        return groupsData.groups.map((group) => {
+            const memberIds = Object.entries(groupsData!.membership)
+                .filter(([, ids]) => ids.includes(group.id))
+                .map(([discordId]) => discordId);
+            const members = memberIds
+                .map((id) => friendById.get(id))
+                .filter((f): f is RemoteFriend => !!f);
+            const nonMembers = groupsFriends.filter((f) => !memberIds.includes(f.discordId));
+
+            return `
+                <div class="settings-card-column group-manage-card" style="margin-bottom:14px" data-group-id="${group.id}">
+                    <div class="group-manage-header">
+                        <span class="settings-name group-name-label">${escapeHtml(group.label)}</span>
+                        <input type="text" class="settings-input group-name-input" value="${escapeHtml(group.label)}" hidden>
+                        <div class="group-manage-actions">
+                            <button type="button" class="settings-btn group-rename-btn" title="Renommer">✏️ Renommer</button>
+                            <button type="button" class="settings-btn settings-btn-danger group-delete-btn" title="Supprimer le groupe">Supprimer</button>
+                        </div>
+                    </div>
+                    <div class="group-member-list">
+                        ${members.length ? members.map((f) => `
+                            <div class="group-member-row">
+                                <span class="settings-avatar group-member-avatar">${f.avatarUrl ? `<img src="${f.avatarUrl}" alt="" class="w-full h-full rounded-full object-cover">` : initials(f.name)}</span>
+                                <span class="group-member-name">${escapeHtml(f.name)}</span>
+                                <button type="button" class="group-member-remove" data-remove-friend="${f.discordId}" title="Retirer du groupe">✕</button>
+                            </div>
+                        `).join("") : `<div class="settings-subtext">Aucun membre.</div>`}
+                    </div>
+                    ${nonMembers.length ? `
+                        <div class="group-add-row">
+                            <select class="settings-input group-add-select">
+                                ${nonMembers.map((f) => `<option value="${f.discordId}">${escapeHtml(f.name)}</option>`).join("")}
+                            </select>
+                            <button type="button" class="button button-primary group-add-btn" style="padding:8px 14px;font-size:13px;white-space:nowrap">+ Ajouter</button>
+                        </div>
+                    ` : ""}
+                </div>
+            `;
+        }).join("");
+    }
+
+    function wireGroupsTab() {
+        const data = groupsData;
+        if (!data) return;
+
+        contentEl!.querySelectorAll<HTMLElement>(".group-manage-card").forEach((card) => {
+            const groupId = card.dataset.groupId!;
+            const group = data.groups.find((g) => g.id === groupId);
+            if (!group) return;
+
+            const nameLabel = card.querySelector<HTMLElement>(".group-name-label");
+            const nameInput = card.querySelector<HTMLInputElement>(".group-name-input");
+
+            card.querySelector(".group-rename-btn")?.addEventListener("click", () => {
+                if (!nameLabel || !nameInput) return;
+                nameLabel.hidden = true;
+                nameInput.hidden = false;
+                nameInput.focus();
+                nameInput.select();
+            });
+
+            function saveRename() {
+                if (!nameInput || !nameLabel) return;
+                const value = nameInput.value.trim();
+                if (value && value !== group!.label) {
+                    group!.label = value;
+                    void saveGroupsData(data!);
+                    nameLabel.textContent = value;
+                } else {
+                    nameInput.value = group!.label;
+                }
+                nameLabel.hidden = false;
+                nameInput.hidden = true;
+            }
+            nameInput?.addEventListener("blur", saveRename);
+            nameInput?.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") nameInput.blur();
+                if (e.key === "Escape") {
+                    nameInput.value = group!.label;
+                    nameInput.blur();
+                }
+            });
+
+            card.querySelector(".group-delete-btn")?.addEventListener("click", () => {
+                if (!confirm(`Supprimer le groupe « ${group!.label} » ?`)) return;
+                data.groups = data.groups.filter((g) => g.id !== groupId);
+                for (const friendId of Object.keys(data.membership)) {
+                    data.membership[friendId] = data.membership[friendId].filter((gId) => gId !== groupId);
+                    if (data.membership[friendId].length === 0) delete data.membership[friendId];
+                }
+                void saveGroupsData(data);
+                renderContent();
+            });
+
+            card.querySelectorAll<HTMLButtonElement>("[data-remove-friend]").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const friendId = btn.dataset.removeFriend!;
+                    data.membership[friendId] = (data.membership[friendId] ?? []).filter((gId) => gId !== groupId);
+                    if (data.membership[friendId].length === 0) delete data.membership[friendId];
+                    void saveGroupsData(data);
+                    renderContent();
+                });
+            });
+
+            card.querySelector(".group-add-btn")?.addEventListener("click", () => {
+                const select = card.querySelector<HTMLSelectElement>(".group-add-select");
+                const friendId = select?.value;
+                if (!friendId) return;
+                const current = data.membership[friendId] ?? [];
+                if (!current.includes(groupId)) data.membership[friendId] = [...current, groupId];
+                void saveGroupsData(data);
+                renderContent();
+            });
+        });
+    }
+
+    async function loadGroupsTab() {
+        if (groupsData !== null || groupsError) return;
+        try {
+            [groupsData, groupsFriends] = await Promise.all([loadPersistedGroupsData(), fetchFriends()]);
+        } catch (err) {
+            groupsError = err instanceof Error ? err.message : "Erreur inconnue.";
+            console.error("Impossible de charger les groupes :", err);
+        }
+        if (activeTab === "groupes") renderContent();
+    }
+
     function wireVolumeSlider() {
         const slider = contentEl!.querySelector<HTMLInputElement>("#volume-slider");
         const valueEl = contentEl!.querySelector<HTMLElement>("#volume-value");
@@ -252,6 +407,31 @@ async function initAccount(): Promise<void> {
                 setOverlaySettings(overlaySettings);
             });
         }
+    }
+
+    function wireTextScaleSlider() {
+        const slider = contentEl!.querySelector<HTMLInputElement>("#text-scale-slider");
+        const valueEl = contentEl!.querySelector<HTMLElement>("#text-scale-value");
+        if (!slider) return;
+
+        const min = Number(slider.min);
+        const max = Number(slider.max);
+
+        function paint(value: number) {
+            const pct = ((value - min) / (max - min)) * 100;
+            slider!.style.background = `linear-gradient(to right, rgb(var(--color-primary)) ${pct}%, rgba(255,255,255,.1) ${pct}%)`;
+            if (valueEl) valueEl.textContent = `${value}%`;
+        }
+
+        paint(textScale);
+        slider.addEventListener("input", () => {
+            textScale = Number(slider.value);
+            paint(textScale);
+            (document.documentElement.style as CSSStyleDeclaration & {zoom: string}).zoom = `${textScale}%`;
+        });
+        slider.addEventListener("change", () => {
+            void setTextScale(textScale);
+        });
     }
 
     function wirePositionGrid() {
@@ -369,6 +549,7 @@ async function initAccount(): Promise<void> {
         else if (activeTab === "overlay") contentEl!.innerHTML = renderOverlayTab();
         else if (activeTab === "serveur") contentEl!.innerHTML = renderServeurTab();
         else if (activeTab === "changelog") contentEl!.innerHTML = renderChangelogTab();
+        else if (activeTab === "groupes") contentEl!.innerHTML = renderGroupesTab();
         else contentEl!.innerHTML = renderSecuriteTab();
 
         wireVolumeSlider();
@@ -377,12 +558,15 @@ async function initAccount(): Promise<void> {
         wireAutoUpdateToggle();
         wireCloseToTrayToggle();
         wireAutostartToggle();
+        wireTextScaleSlider();
         wireUsernameForm();
         wireServerChange();
         wireLogout();
         wireChangelogLinks();
+        wireGroupsTab();
 
         if (activeTab === "changelog") void loadChangelog();
+        if (activeTab === "groupes") void loadGroupsTab();
     }
 
     navEl.querySelectorAll<HTMLButtonElement>(".settings-nav-item[data-tab]").forEach((btn) => {
