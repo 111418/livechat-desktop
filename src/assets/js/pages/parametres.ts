@@ -1,7 +1,7 @@
 import {initials} from "../utils/avatar.ts";
 import {getAccount, setUsername, clearAccount} from "../utils/account-store.ts";
 import {getOverlaySettings, setOverlaySettings, type PositionId} from "../utils/overlay-settings-store.ts";
-import {getServerUrl, setServerUrl, clearToken, getCloseToTray, setCloseToTray, getTextScale, setTextScale} from "../services/config.ts";
+import {getServerUrl, setServerUrl, clearToken, getCloseToTray, setCloseToTray, getTextScale, setTextScale, getSelfPreview, setSelfPreview} from "../services/config.ts";
 import {apiRequest, ApiError} from "../services/api.ts";
 import {getUpdateSettings, setUpdateSettings} from "../utils/update-settings-store.ts";
 import {isEnabled as isAutostartEnabled, enable as enableAutostart, disable as disableAutostart} from "@tauri-apps/plugin-autostart";
@@ -35,6 +35,7 @@ let serverUrl = "";
 let closeToTray = true;
 let autostartEnabled = false;
 let textScale = 100;
+let selfPreview = false;
 
 // null = pas encore chargé, tableau vide = chargé mais aucune release trouvée.
 let releases: ReleaseInfo[] | null = null;
@@ -65,6 +66,7 @@ async function initAccount(): Promise<void> {
     serverUrl = await getServerUrl();
     closeToTray = await getCloseToTray();
     textScale = await getTextScale();
+    selfPreview = await getSelfPreview();
     try {
         autostartEnabled = await isAutostartEnabled();
     } catch (err) {
@@ -153,6 +155,15 @@ async function initAccount(): Promise<void> {
                         <span class="volume-value" id="volume-value">${overlaySettings.volume}%</span>
                     </div>
                 </div>
+            </div>
+            <div class="settings-card" style="margin-top:12px">
+                <div class="settings-name-col">
+                    <span class="settings-name" style="font-size:13.5px">Voir mes propres jumpscares</span>
+                    <span class="settings-subtext" style="font-weight:500;max-width:330px">Affiche aussi chez toi, en aperçu, les jumpscares que tu envoies — comme si tu les recevais.</span>
+                </div>
+                <button type="button" class="settings-toggle${selfPreview ? " is-on" : ""}" id="self-preview-toggle" aria-pressed="${selfPreview}">
+                    <span class="settings-toggle-knob"></span>
+                </button>
             </div>
         `;
     }
@@ -479,6 +490,16 @@ async function initAccount(): Promise<void> {
         });
     }
 
+    function wireSelfPreviewToggle() {
+        const toggle = contentEl!.querySelector<HTMLButtonElement>("#self-preview-toggle");
+        toggle?.addEventListener("click", () => {
+            selfPreview = !selfPreview;
+            toggle.classList.toggle("is-on", selfPreview);
+            toggle.setAttribute("aria-pressed", String(selfPreview));
+            void setSelfPreview(selfPreview);
+        });
+    }
+
     function wireAutostartToggle() {
         const toggle = contentEl!.querySelector<HTMLButtonElement>("#autostart-toggle");
         toggle?.addEventListener("click", async () => {
@@ -557,6 +578,7 @@ async function initAccount(): Promise<void> {
         wireTransparentToggle();
         wireAutoUpdateToggle();
         wireCloseToTrayToggle();
+        wireSelfPreviewToggle();
         wireAutostartToggle();
         wireTextScaleSlider();
         wireUsernameForm();

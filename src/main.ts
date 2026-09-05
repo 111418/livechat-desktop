@@ -6,7 +6,7 @@ import { isMuted } from "./assets/js/utils/muted-friends-store.ts";
 import { fetchMe } from "./assets/js/services/me.ts";
 import { connectSocket, onSocket, requestSetDnd, type LivechatPayload } from "./assets/js/services/socket.ts";
 import { checkForUpdate } from "./assets/js/services/updater.ts";
-import { getTextScale } from "./assets/js/services/config.ts";
+import { getTextScale, getMyDiscordId, getSelfPreview } from "./assets/js/services/config.ts";
 
 let greetInputEl: HTMLInputElement | null;
 let greetMsgEl: HTMLElement | null;
@@ -83,9 +83,14 @@ window.addEventListener("DOMContentLoaded", async () => {
     // Connecte le socket avant d'initialiser les pages qui s'abonnent à des
     // events (accueil.ts) : onSocket() est un no-op tant que le socket n'existe pas.
     try {
+        const [myDiscordId, selfPreview] = await Promise.all([getMyDiscordId(), getSelfPreview()]);
         await connectSocket();
         onSocket("livechat", (payload: LivechatPayload) => {
-            if (isMuted(payload.author_discord_id) || dndEnabled) return;
+            // Le serveur renvoie aussi à l'expéditeur son propre jumpscare (voir
+            // livechat-api) : un aperçu optionnel, distinct du mute/DND qui ne
+            // concerne que ce qui vient des autres.
+            const isFromSelf = payload.author_discord_id === myDiscordId;
+            if (isFromSelf ? !selfPreview : (isMuted(payload.author_discord_id) || dndEnabled)) return;
             void invoke("show_overlay", { payload });
         });
     } catch (err) {

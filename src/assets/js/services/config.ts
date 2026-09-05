@@ -35,6 +35,18 @@ export async function setTextScale(value: number): Promise<void> {
     await store.save();
 }
 
+// Le serveur renvoie aussi à l'expéditeur son propre jumpscare (voir
+// livechat-api) : ce réglage décide si on l'affiche chez soi ou si on
+// l'ignore (défaut, comme avant).
+export async function getSelfPreview(): Promise<boolean> {
+    return (await store.get<boolean>("selfPreview")) ?? false;
+}
+
+export async function setSelfPreview(value: boolean): Promise<void> {
+    await store.set("selfPreview", value);
+    await store.save();
+}
+
 export async function getToken(): Promise<string | null> {
     return (await store.get<string>("token")) ?? null;
 }
