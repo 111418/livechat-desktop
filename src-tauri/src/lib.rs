@@ -51,6 +51,71 @@ struct LivechatPayload {
     offset: Option<f64>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MonitorInfo {
+    name: String,
+    width: u32,
+    height: u32,
+    is_primary: bool,
+}
+
+// Repositionne l'overlay sur l'ecran choisi dans les parametres (stocke par
+// son nom, ex. "\\.\DISPLAY2" sous Windows), ou sur l'ecran principal si rien
+// n'est choisi ou si l'ecran choisi a disparu (deconnecte depuis).
+fn apply_overlay_monitor(app: &AppHandle) {
+    let Some(overlay) = app.get_webview_window("overlay") else {
+        return;
+    };
+
+    let chosen_name = app
+        .store("config.json")
+        .ok()
+        .and_then(|s| s.get("overlayMonitor"))
+        .and_then(|v| v.as_str().map(|s| s.to_string()));
+
+    let monitor = chosen_name
+        .as_deref()
+        .and_then(|name| {
+            overlay
+                .available_monitors()
+                .ok()?
+                .into_iter()
+                .find(|m| m.name().map(|n| n.as_str()) == Some(name))
+        })
+        .or_else(|| overlay.primary_monitor().ok().flatten());
+
+    if let Some(monitor) = monitor {
+        let _ = overlay.set_size(*monitor.size());
+        let _ = overlay.set_position(*monitor.position());
+    }
+}
+
+#[tauri::command]
+fn list_monitors(app: AppHandle) -> Result<Vec<MonitorInfo>, String> {
+    let overlay = app
+        .get_webview_window("overlay")
+        .ok_or("fenetre overlay introuvable")?;
+    let primary_name = overlay
+        .primary_monitor()
+        .map_err(|e| e.to_string())?
+        .and_then(|m| m.name().cloned());
+
+    let monitors = overlay.available_monitors().map_err(|e| e.to_string())?;
+    Ok(monitors
+        .iter()
+        .filter_map(|m| {
+            let name = m.name()?.clone();
+            Some(MonitorInfo {
+                is_primary: Some(&name) == primary_name.as_ref(),
+                name,
+                width: m.size().width,
+                height: m.size().height,
+            })
+        })
+        .collect())
+}
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -61,6 +126,10 @@ fn greet(name: &str) -> String {
 fn show_overlay(app: AppHandle, payload: LivechatPayload) -> Result<(), String> {
     app.emit_to("overlay", "livechat", payload)
         .map_err(|e| e.to_string())?;
+    // Repositionne a chaque affichage (et pas seulement au demarrage) : si
+    // l'utilisateur change l'ecran choisi dans les parametres pendant que
+    // l'app tourne, ca prend effet des le prochain jumpscare sans redemarrer.
+    apply_overlay_monitor(&app);
     if let Some(overlay) = app.get_webview_window("overlay") {
         // Jamais de set_focus() ici : l'overlay ne doit pas voler le focus a l'app active.
         overlay.show().map_err(|e| e.to_string())?;
@@ -127,7 +196,12 @@ pub fn run() {
                 })
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![greet, show_overlay, hide_overlay])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            show_overlay,
+            hide_overlay,
+            list_monitors
+        ])
         .setup(|app| {
             // macOS enregistre le scheme via Info.plist au build ; Windows/Linux n'ont pas
             // d'installeur en mode dev, donc on enregistre le scheme nous-memes ici.
@@ -187,12 +261,9 @@ pub fn run() {
                     .build()?;
 
             // Pas de .fullscreen(true) : sur macOS ca bascule dans un Space dedie (mauvais
-            // ecran, flash noir, transparence cassee). On couvre l'ecran principal a la main.
-            let monitor = overlay_window
-                .primary_monitor()?
-                .ok_or("no primary monitor found")?;
-            overlay_window.set_size(*monitor.size())?;
-            overlay_window.set_position(*monitor.position())?;
+            // ecran, flash noir, transparence cassee). On couvre l'ecran choisi a la main
+            // (parametres > Overlay > Ecran d'affichage), ecran principal par defaut.
+            apply_overlay_monitor(&app.handle().clone());
             // L'overlay (fond + jumpscare) doit toujours etre 100% click-through.
             overlay_window.set_ignore_cursor_events(true)?;
 

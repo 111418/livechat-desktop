@@ -1,7 +1,7 @@
 import {initials} from "../utils/avatar.ts";
 import {getAccount, setUsername, clearAccount} from "../utils/account-store.ts";
 import {getOverlaySettings, setOverlaySettings, type PositionId} from "../utils/overlay-settings-store.ts";
-import {getServerUrl, setServerUrl, clearToken, getCloseToTray, setCloseToTray, getTextScale, setTextScale, getSelfPreview, setSelfPreview} from "../services/config.ts";
+import {getServerUrl, setServerUrl, clearToken, getCloseToTray, setCloseToTray, getTextScale, setTextScale, getSelfPreview, setSelfPreview, getOverlayMonitor, setOverlayMonitor, listMonitors, type MonitorInfo} from "../services/config.ts";
 import {apiRequest, ApiError} from "../services/api.ts";
 import {getUpdateSettings, setUpdateSettings} from "../utils/update-settings-store.ts";
 import {isEnabled as isAutostartEnabled, enable as enableAutostart, disable as disableAutostart} from "@tauri-apps/plugin-autostart";
@@ -36,6 +36,9 @@ let closeToTray = true;
 let autostartEnabled = false;
 let textScale = 100;
 let selfPreview = false;
+let overlayMonitor: string | null = null;
+// null = pas encore chargé, tableau vide = chargé mais l'appel a échoué ou un seul écran détecté.
+let monitors: MonitorInfo[] | null = null;
 
 // null = pas encore chargé, tableau vide = chargé mais aucune release trouvée.
 let releases: ReleaseInfo[] | null = null;
@@ -67,6 +70,13 @@ async function initAccount(): Promise<void> {
     closeToTray = await getCloseToTray();
     textScale = await getTextScale();
     selfPreview = await getSelfPreview();
+    overlayMonitor = await getOverlayMonitor();
+    try {
+        monitors = await listMonitors();
+    } catch (err) {
+        monitors = [];
+        console.error("Impossible de lister les écrans :", err);
+    }
     try {
         autostartEnabled = await isAutostartEnabled();
     } catch (err) {
@@ -155,6 +165,14 @@ async function initAccount(): Promise<void> {
                         <span class="volume-value" id="volume-value">${overlaySettings.volume}%</span>
                     </div>
                 </div>
+            </div>
+            <div class="settings-card-column" style="margin-top:12px">
+                <div class="settings-name" style="margin-bottom:10px">Écran d'affichage</div>
+                <span class="settings-subtext" style="font-weight:500;display:block;margin-bottom:10px;max-width:420px">Sur quel écran le livechat reçu s'affiche, si tu en as plusieurs. « Écran principal » suit l'écran principal de Windows, même s'il change.</span>
+                <select class="settings-input" id="overlay-monitor-select" style="max-width:320px">
+                    <option value="">Écran principal (par défaut)</option>
+                    ${(monitors ?? []).map((m, i) => `<option value="${escapeHtml(m.name)}"${m.name === overlayMonitor ? " selected" : ""}>Écran ${i + 1} — ${m.width}×${m.height}${m.isPrimary ? " · principal" : ""}</option>`).join("")}
+                </select>
             </div>
             <div class="settings-card" style="margin-top:12px">
                 <div class="settings-name-col">
@@ -490,6 +508,14 @@ async function initAccount(): Promise<void> {
         });
     }
 
+    function wireOverlayMonitorSelect() {
+        const select = contentEl!.querySelector<HTMLSelectElement>("#overlay-monitor-select");
+        select?.addEventListener("change", () => {
+            overlayMonitor = select.value || null;
+            void setOverlayMonitor(overlayMonitor);
+        });
+    }
+
     function wireSelfPreviewToggle() {
         const toggle = contentEl!.querySelector<HTMLButtonElement>("#self-preview-toggle");
         toggle?.addEventListener("click", () => {
@@ -579,6 +605,7 @@ async function initAccount(): Promise<void> {
         wireAutoUpdateToggle();
         wireCloseToTrayToggle();
         wireSelfPreviewToggle();
+        wireOverlayMonitorSelect();
         wireAutostartToggle();
         wireTextScaleSlider();
         wireUsernameForm();

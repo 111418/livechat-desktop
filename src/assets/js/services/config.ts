@@ -1,6 +1,31 @@
 import { LazyStore } from "@tauri-apps/plugin-store";
+import { invoke } from "@tauri-apps/api/core";
 
 const store = new LazyStore("config.json");
+
+export interface MonitorInfo {
+    name: string;
+    width: number;
+    height: number;
+    isPrimary: boolean;
+}
+
+export async function listMonitors(): Promise<MonitorInfo[]> {
+    return await invoke<MonitorInfo[]>("list_monitors");
+}
+
+// Nom du moniteur (voir MonitorInfo.name, ex. "\\.\DISPLAY2") ou null pour
+// suivre l'ecran principal actuel (comportement par defaut). Lu cote Rust
+// (voir apply_overlay_monitor dans lib.rs) pour positionner la fenetre overlay.
+export async function getOverlayMonitor(): Promise<string | null> {
+    return (await store.get<string>("overlayMonitor")) ?? null;
+}
+
+export async function setOverlayMonitor(name: string | null): Promise<void> {
+    if (name) await store.set("overlayMonitor", name);
+    else await store.delete("overlayMonitor");
+    await store.save();
+}
 
 export async function getServerUrl(): Promise<string> {
     return (await store.get<string>("serverUrl")) ?? "";
