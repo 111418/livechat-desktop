@@ -21,6 +21,20 @@ fn escape_shortcut() -> Shortcut {
     "Escape".parse().expect("raccourci Echap invalide")
 }
 
+// Sous Windows, show() seul ne sort pas une fenetre minimisee de cet etat
+// (elle reste invisible malgre le show()) : sans unminimize() d'abord,
+// recliquer sur l'icone de la zone de notification ou relancer l'exe une
+// fois l'appli minimisee ne faisait plus rien — la fenetre restait coincee,
+// invisible et injoignable (donc impossible a fermer via sa barre de titre
+// perso), forçant a tuer le process depuis le gestionnaire des taches.
+fn show_main_window(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.unminimize();
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
+}
+
 fn hide_overlay_internal(app: &AppHandle) {
     // Le handler du raccourci Echap (voir plus bas) appelle cette fonction
     // depuis l'intérieur même du callback de déclenchement du plugin
@@ -160,10 +174,7 @@ pub fn run() {
         if let Some(url) = argv.iter().find(|arg| arg.starts_with("splatt://")) {
             let _ = app.emit("deep-link://new-url", vec![url.clone()]);
         }
-        if let Some(main) = app.get_webview_window("main") {
-            let _ = main.show();
-            let _ = main.set_focus();
-        }
+        show_main_window(app);
     }));
 
     // Verifie les nouvelles versions via le manifeste publie sur GitHub Releases
@@ -308,12 +319,7 @@ pub fn run() {
                         .menu(&tray_menu)
                         .tooltip("Splatt")
                         .on_menu_event(|app, event| match event.id.as_ref() {
-                            "open" => {
-                                if let Some(w) = app.get_webview_window("main") {
-                                    let _ = w.show();
-                                    let _ = w.set_focus();
-                                }
-                            }
+                            "open" => show_main_window(app),
                             "quit" => app.exit(0),
                             _ => {}
                         })
@@ -324,11 +330,7 @@ pub fn run() {
                                 ..
                             } = event
                             {
-                                let app = tray.app_handle();
-                                if let Some(w) = app.get_webview_window("main") {
-                                    let _ = w.show();
-                                    let _ = w.set_focus();
-                                }
+                                show_main_window(tray.app_handle());
                             }
                         });
                     if let Some(icon) = app.default_window_icon() {
