@@ -9,6 +9,8 @@ interface FriendRequestRow {
     isAccepted: boolean | null;
     isPending: boolean | null;
     isRejected: boolean | null;
+    senderUsername?: string | null;
+    receiverUsername?: string | null;
 }
 
 interface FriendRequestsResponse {
@@ -26,8 +28,8 @@ type Tab = "received" | "sent";
 let received: RequestItem[] = [];
 let sent: RequestItem[] = [];
 
-// L'API ne renvoie pas de pseudo sur les demandes (juste sender_id/receiver_id) :
-// on retombe sur l'id Discord tronqué, comme ailleurs dans l'app.
+// Repli si le pseudo n'a encore jamais été capturé côté serveur (compte pas
+// encore connecté à Splatt une seule fois) : id Discord tronqué, comme ailleurs.
 function fallbackName(discordId: string): string {
     return `Ami #${discordId.slice(-4)}`;
 }
@@ -146,8 +148,8 @@ export function initDemandes() {
             const data = await apiRequest<FriendRequestsResponse>("/friends/requests");
             received = data.received
                 .filter((r) => !isRejected(r))
-                .map((r) => ({id: r.senderId, name: fallbackName(r.senderId)}));
-            sent = data.sent.map((r) => ({id: r.receiverId, name: fallbackName(r.receiverId)}));
+                .map((r) => ({id: r.senderId, name: r.senderUsername || fallbackName(r.senderId)}));
+            sent = data.sent.map((r) => ({id: r.receiverId, name: r.receiverUsername || fallbackName(r.receiverId)}));
         } catch (err) {
             console.error("Impossible de charger les demandes :", err);
         }
